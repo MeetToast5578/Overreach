@@ -44,6 +44,7 @@ import { UpgradeStructureExecutionSnapshot } from "../execution/UpgradeStructure
 import { WarshipExecutionSnapshot } from "../execution/WarshipExecution";
 import { WinCheckExecutionSnapshot } from "../execution/WinCheckExecution";
 import { SandboxExecutionSnapshot } from "../overreach/SandboxExecution";
+import { ScenarioExecutionSnapshot } from "../overreach/ScenarioExecution";
 import type { ExecutionSnapshotType } from "./ExecutionSnapshot";
 
 /**
@@ -66,6 +67,7 @@ export const EXECUTION_SNAPSHOT_TYPES = [
   DeleteUnitExecutionSnapshot,
   DonateGoldExecutionSnapshot,
   SandboxExecutionSnapshot,
+  ScenarioExecutionSnapshot,
   DonateTroopsExecutionSnapshot,
   DoomsdayClockExecutionSnapshot,
   EmbargoAllExecutionSnapshot,

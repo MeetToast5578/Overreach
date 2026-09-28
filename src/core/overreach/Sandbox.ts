@@ -48,6 +48,18 @@ export const SANDBOX_STRUCTURES = [
 const PlayerIDSchema = z.string().min(1).max(64);
 const TileSchema = z.number().int().nonnegative();
 
+// Shared with scenarios (Scenario.ts).
+export const NewPlayerIDSchema = z.string().regex(/^[A-Za-z0-9]{8,10}$/); // Schemas.GAME_ID_REGEX
+export const NationNameSchema = z
+  .string()
+  .min(1)
+  .max(40)
+  .regex(/^[\p{L}\p{N} .,'’()&-]+$/u);
+export const ColorSchema = z.string().regex(/^#[0-9a-f]{6}$/i);
+// A resources/flags file name (without .svg). No "/" or ".", so it can't
+// leave that folder when it becomes a URL.
+export const FlagSchema = z.string().regex(/^[\p{L}\p{N} '()_-]{1,40}$/u);
+
 export const SandboxActionSchema = z.discriminatedUnion("kind", [
   // owner null makes the tiles unclaimed. Water and impassable tiles are skipped.
   z.object({
@@ -59,23 +71,11 @@ export const SandboxActionSchema = z.discriminatedUnion("kind", [
   // already in use is ignored.
   z.object({
     kind: z.literal("create_nation"),
-    id: z.string().regex(/^[A-Za-z0-9]{8,10}$/), // Schemas.GAME_ID_REGEX
+    id: NewPlayerIDSchema,
     tile: TileSchema,
-    name: z
-      .string()
-      .min(1)
-      .max(40)
-      .regex(/^[\p{L}\p{N} .,'()&-]+$/u),
-    color: z
-      .string()
-      .regex(/^#[0-9a-f]{6}$/i)
-      .optional(),
-    // A resources/flags file name (without .svg). No "/" or ".", so it can't
-    // leave that folder when it becomes a URL.
-    flag: z
-      .string()
-      .regex(/^[\p{L}\p{N} '()_-]{1,40}$/u)
-      .optional(),
+    name: NationNameSchema,
+    color: ColorSchema.optional(),
+    flag: FlagSchema.optional(),
   }),
   z.object({ kind: z.literal("delete_nation"), player: PlayerIDSchema }),
   z.object({

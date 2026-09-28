@@ -204,13 +204,43 @@ Checked:
   - a synthetic 250-nation scenario on World stays within the tick-time budget (`npm run perf:game`).
   - Most OpenFront games start with small spawns, not a full map, so **measure this first**.
 
+**Status (28 Sep 2026): done.**
+
+- **One file, not two.** A scenario is a single JSON file (`src/core/overreach/Scenario.ts`) holding the map, its
+  nations (id, name, colour, flag, troops, gold), alliances as pairs, and every tile's owner as runs of
+  `[owner, length]`. The engine can't decode PNGs (no dependencies in `src/core`), and runs are small: 145 KB for 250
+  nations on World. Wars are left out: OpenFront has no war state, only attacks.
+- **Engine:** the scenario rides in `GameConfig.scenario`. `ScenarioExecution` (added by one `GameRunner` hook) places
+  it on the first tick: players, tiles through `conquer()`, a `PlayerExecution` and the AI for each nation, alliances.
+  Then it ends the spawn phase. Troops default to half the nation's limit. A file made for another map size places
+  nothing.
+- **Sandbox:** Save (panel) downloads the current world. Load scenario (Sandbox tab) checks the file, sets its map and
+  starts with its nations instead of the map's nations and tribes.
+- **Measured** (`npx tsx tests/overreach/perf/ScenarioPerf.ts`, a flood fill from random seeds over all of World's
+  land, 100 ms tick budget):
+
+  | Nations | Placing them | Mean tick | p99   | Slowest | Over budget |
+  | ------- | ------------ | --------- | ----- | ------- | ----------- |
+  | 250     | 193 ms       | 4.0 ms    | 15 ms | 23 ms   | 0 of 600    |
+  | 1,000   | 252 ms       | 12 ms     | 42 ms | 51 ms   | 0 of 300    |
+
+  In headless Chrome (software GPU), the 250-nation file loads in 3.5 s and runs at 9.6 of 10 ticks a second. The AI
+  goes to war at once: 107 of 250 nations are gone after 60 s. That's for F7 pacing, not speed.
+
+- **Checked:**
+  - 6 tests in `tests/overreach/Scenario.test.ts`: each nation owns exactly its land, water skipped; colour, flag,
+    troops, gold, alliances and AI; the `GameRunner` path; snapshots; bad files rejected;
+  - in the browser, a saved file matches the game tile for tile (73 of 73 nations), and loading it brings back every
+    nation with its colour and flag.
+- **Next:** F3 writes World 1836 as one of these files. A built-in scenario list comes with it.
+
 ### F3: The World 1836 map
 
 - `tools/export_openfront.py` downsamples our terrain to 2000×1000:
   - water and lakes use blue 106;
   - plains, hills and mountains map to their elevation ranges (blue 140–200).
-- It also rasterises the 1836 owners from the `ROADMAP.md` §3.3 rules into `owners.png`. The town list and the
-  ~60 town→owner checks from `ROADMAP.md` §3.3 run on that raster.
+- It also rasterises the 1836 owners from the `ROADMAP.md` §3.3 rules into a scenario file (F2's format). The town
+  list and the ~60 town→owner checks from `ROADMAP.md` §3.3 run on that raster.
 - **Done when:** "World 1836" shows in the map list and starts with 1836 borders, and you sign off Europe, the
   Americas, India and Africa on screen.
 

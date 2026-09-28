@@ -21,6 +21,7 @@ import {
   SendSandboxIntentEvent,
   setSandboxControl,
 } from "./SandboxEvents";
+import { downloadScenario, NAME_CHARS, scenarioFromGame } from "./ScenarioFile";
 
 type Tool =
   | "select"
@@ -51,7 +52,6 @@ type UndoEntry =
   | { kind: "gold"; player: string; gold: number };
 const MAX_UNDO = 100;
 const FLUSH_MS = 100;
-const NAME_CHARS = /[^\p{L}\p{N} .,'()&-]/gu;
 // Flags for new nations, by name; "xx" is the list's "None".
 const FLAGS = Countries.filter((c) => c.code !== "xx").sort((a, b) =>
   a.name.localeCompare(b.name),
@@ -428,6 +428,13 @@ export class SandboxPanel extends LitElement implements Controller {
               @click=${() => this.undo()}
             >
               ${translateText("sandbox.undo")}
+            </button>
+            <button
+              class=${btn(false)}
+              title=${translateText("sandbox.save_hint")}
+              @click=${() => downloadScenario(scenarioFromGame(this.game))}
+            >
+              ${translateText("sandbox.save")}
             </button>
             <button
               class=${btn(false)}

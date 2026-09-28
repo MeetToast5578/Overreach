@@ -168,7 +168,13 @@ describe.each(VARIANTS)("full game snapshots: %s", (_, overrides) => {
       // OverreachSandbox runs during the spawn phase and ends a tick later, so
       // this non-sandbox game never holds one at a checkpoint;
       // tests/overreach/Sandbox.test.ts round-trips it directly.
-      const neverStored = new Set(["Pause", "OverreachSandbox"]);
+      // OverreachScenario only exists in scenario games, for their first tick;
+      // tests/overreach/Scenario.test.ts round-trips it.
+      const neverStored = new Set([
+        "Pause",
+        "OverreachSandbox",
+        "OverreachScenario",
+      ]);
       const missing = EXECUTION_SNAPSHOT_TYPES.map((t) => t.name).filter(
         (name) => !reference.execTypes.has(name) && !neverStored.has(name),
       );

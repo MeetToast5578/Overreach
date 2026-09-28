@@ -14,6 +14,7 @@ import {
   UnitType,
 } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
+import type { Scenario } from "../core/overreach/Scenario";
 import { PlayerCosmetics, TeamCountConfig } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { responseHasLinkedIdentity } from "./AccountIdentity";
@@ -29,6 +30,7 @@ import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { GameStartingModal } from "./GameStartingModal";
 import { showInGameAlert } from "./InGameModal";
 import { JoinLobbyEvent } from "./Main";
+import "./overreach/ScenarioFile";
 import { fallbackPlayerName, ResolvedPlayerName } from "./PlayerName";
 import { UsernameInput } from "./UsernameInput";
 import {
@@ -190,6 +192,7 @@ export class SinglePlayerModal extends BaseModal {
   @state() private maxTimerValue: number | undefined =
     DEFAULT_OPTIONS.maxTimerValue;
   @state() private instantBuild: boolean = DEFAULT_OPTIONS.instantBuild;
+  @state() private scenario: Scenario | null = null; // Overreach sandbox
   @state() private randomSpawn: boolean = DEFAULT_OPTIONS.randomSpawn;
   @state() private useRandomMap: boolean = DEFAULT_OPTIONS.useRandomMap;
   @state() private gameMode: GameMode = DEFAULT_OPTIONS.gameMode;
@@ -495,8 +498,15 @@ export class SinglePlayerModal extends BaseModal {
         >
           ${this.activeTab === "sandbox"
             ? html`<p class="mb-4 text-sm text-white/70">
-                ${translateText("sandbox.intro")}
-              </p>`
+                  ${translateText("sandbox.intro")}
+                </p>
+                <scenario-picker
+                  .scenario=${this.scenario}
+                  @scenario-change=${(e: CustomEvent<Scenario | null>) => {
+                    this.scenario = e.detail;
+                    if (e.detail !== null) this.selectedMap = e.detail.map;
+                  }}
+                ></scenario-picker>`
             : null}
           <game-config-settings
             class="block"
@@ -1199,6 +1209,17 @@ export class SinglePlayerModal extends BaseModal {
                         enabled: true,
                         startMinutes: this.overtimeStartMinutes ?? 30,
                       },
+                    }
+                  : {}),
+                // Overreach: a loaded scenario sets the map and brings its own
+                // nations, instead of the map's nations and tribes.
+                ...(this.activeTab === "sandbox" && this.scenario
+                  ? {
+                      gameMap: this.scenario.map,
+                      gameMapSize: this.scenario.mapSize,
+                      nations: "disabled" as const,
+                      bots: 0,
+                      scenario: this.scenario,
                     }
                   : {}),
               },

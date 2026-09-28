@@ -24,6 +24,7 @@ import {
   UnitType,
 } from "./game/Game";
 import { SandboxIntent, SandboxIntentSchema } from "./overreach/Sandbox";
+import { ScenarioSchema } from "./overreach/Scenario";
 import { ArchivedPlayerStatsSchema, PlayerStatsSchema } from "./StatsSchemas";
 import { flattenedEmojiTable, LOBBY_LABEL_MAX } from "./Util";
 
@@ -568,6 +569,7 @@ export const GameConfigSchema = z.object({
   infiniteTroops: z.boolean(),
   instantBuild: z.boolean(),
   sandbox: z.boolean().optional(), // Overreach sandbox mode: god-mode intents allowed
+  scenario: zb.json(ScenarioSchema).optional(), // Overreach: pre-drawn nations (ScenarioExecution)
   disableNavMesh: z.boolean().optional(),
   disableAlliances: z.boolean().nullable().optional(),
   disableClanTags: z.boolean().optional(),
