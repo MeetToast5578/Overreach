@@ -92,8 +92,8 @@ our changes.
 
 ### F0: Set up (1–2 sessions)
 
-**Status (28 Sep 2026): done, except pushing to GitHub** (the GitHub connector can't create repos; the user creates
-the empty private repo). Checked: lint clean; production build passes; tests pass apart from the known machine
+**Status (28 Sep 2026): done.** Pushed to the private repo `MeetToast5578/Overreach` (`origin`); `upstream` is
+OpenFront. Checked: lint clean; production build passes; tests pass apart from the known machine
 quirks listed in `CLAUDE.md`; a 50-bot single-player game on World starts, spawns and expands in headless Chrome;
 network traffic goes only to the local server, the absent local API (`localhost:8787`) and OpenFront's YouTube
 tutorial video. Left for later: the "Use verified" name button, sounds and music (none yet), and translations in
