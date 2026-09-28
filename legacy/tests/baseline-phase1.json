@@ -1,0 +1,17 @@
+{
+  "note": "After the phase 1 fixes, 2026-09-22. AI suite, 80 years, three seeds in parallel workers. Shares are raw map pixels.",
+  "runs": {
+    "1836":  { "wars": 3181, "peaces": 3125, "transfers": 2873, "provincesMoved": 219, "alive": 219, "alliances": 29, "avgWarYears": 1.40, "msPerDay": 10.29 },
+    "alpha": { "wars": 3174, "peaces": 3121, "transfers": 2823, "provincesMoved": 204, "alive": 222, "alliances": 24, "avgWarYears": 1.41, "msPerDay": 10.33 },
+    "beta":  { "wars": 3332, "peaces": 3281, "transfers": 3076, "provincesMoved": 240, "alive": 218, "alliances": 19, "avgWarYears": 1.36, "msPerDay": 10.23 }
+  },
+  "greatPowersSeed1836Provinces": { "Russia": [1313, 1319], "Canada": [517, 517], "United States of America": [906, 908], "China": [594, 597], "Brazil": [647, 653], "Australia": [241, 245] },
+  "powersDiagnosis30yrSeed1836": [
+    { "name": "Russia", "warsStarted": 21, "warsDefended": 0, "yearsAtWar": 29, "provincesGained": 3, "peakOccupied": "5 of 19", "armyVsLimit": "532 / 1705" },
+    { "name": "Canada", "warsStarted": 9, "warsDefended": 3, "yearsAtWar": 20.8, "provincesGained": 1, "provincesLost": 3, "peakOccupied": "14 of 912", "armyVsLimit": "129 / 557" },
+    { "name": "United States of America", "warsStarted": 15, "warsDefended": 0, "yearsAtWar": 23.6, "provincesGained": 6, "peakOccupied": "24 of 516", "armyVsLimit": "428 / 1253" },
+    { "name": "China", "warsStarted": 26, "warsDefended": 0, "yearsAtWar": 23.4, "provincesGained": 6, "peakOccupied": "5 of 45", "armyVsLimit": "312 / 888" },
+    { "name": "Brazil", "warsStarted": 23, "warsDefended": 0, "yearsAtWar": 28.8, "provincesGained": 2, "peakOccupied": "10 of 77", "armyVsLimit": "323 / 938" },
+    { "name": "Australia", "warsStarted": 20, "warsDefended": 0, "yearsAtWar": 21, "provincesGained": 7, "peakOccupied": "7 of 30", "armyVsLimit": "215 / 288" }
+  ]
+}

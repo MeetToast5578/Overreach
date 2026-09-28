@@ -1,0 +1,21 @@
+{
+  "note": "Phase 0 baseline, 2026-09-22. Unmodified published build, AI suite, 80 years, three seeds run in parallel workers (msPerDay is inflated by the parallel run). Shares are raw map pixels, which overstate high latitudes.",
+  "runs": {
+    "1836":  { "wars": 2355, "peaces": 2287, "battles": 29434, "sieges": 23022, "transfers": 1482, "provincesMoved": 102, "alive": 216, "destroyed": 25, "alliances": 33, "avgWarYears": 2.16, "msPerDay": 19.38 },
+    "alpha": { "wars": 2446, "peaces": 2379, "battles": 29494, "sieges": 23062, "transfers": 1612, "provincesMoved": 121, "alive": 209, "destroyed": 32, "alliances": 21, "avgWarYears": 2.09, "msPerDay": 19.10 },
+    "beta":  { "wars": 2428, "peaces": 2369, "battles": 30333, "sieges": 22797, "transfers": 1561, "provincesMoved": 106, "alive": 213, "destroyed": 28, "alliances": 33, "avgWarYears": 2.25, "msPerDay": 19.20 }
+  },
+  "greatPowersSeed1836": [
+    { "name": "Russia", "start": 18.97, "end": 18.99, "provsStart": 1313, "provsEnd": 1316 },
+    { "name": "Canada", "start": 10.76, "end": 10.80, "provsStart": 517, "provsEnd": 519 },
+    { "name": "United States of America", "start": 7.19, "end": 7.19, "provsStart": 906, "provsEnd": 907 },
+    { "name": "China", "start": 6.16, "end": 6.16, "provsStart": 594, "provsEnd": 594 },
+    { "name": "Brazil", "start": 4.57, "end": 4.59, "provsStart": 647, "provsEnd": 650 },
+    { "name": "Australia", "start": 4.54, "end": 4.56, "provsStart": 241, "provsEnd": 244 },
+    { "name": "Greenland", "start": 4.36, "end": 4.33, "provsStart": 149, "provsEnd": 148 },
+    { "name": "Kazakhstan", "start": 2.14, "end": 2.15, "provsStart": 144, "provsEnd": 145 },
+    { "name": "India", "start": 1.80, "end": 1.81, "provsStart": 568, "provsEnd": 569 },
+    { "name": "Argentina", "start": 1.80, "end": 1.83, "provsStart": 196, "provsEnd": 198 }
+  ],
+  "checks": { "quickSuites": "28 of 33 pass; the 5 failures are the known bugs #1, #8, #9, #10 and #35", "aiSuite": "8 of 9 pass on every seed; only speed fails (19ms/day with three parallel runs, 13.5ms/day for a single 10-year run in the browser; the handoff's under-10ms figure was measured in Node)" }
+}

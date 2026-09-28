@@ -1,0 +1,66 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Overreach Tests</title>
+<style>
+  :root { --ink: #0e1622; --panel: #162034; --line: #2b3a58; --bone: #ebe5d6; --muted: #98a3bb;
+    --good: #72c793; --bad: #ea6f64; --brass: #d6a44e; color-scheme: dark; }
+  body { margin: 0; padding: 16px; background: var(--ink); color: var(--bone); font: 13px/1.5 system-ui, sans-serif; }
+  h1 { font-size: 18px; margin: 0 0 10px; color: var(--brass); }
+  .bar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; align-items: center; }
+  button, input { background: var(--panel); color: var(--bone); border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; font: inherit; }
+  input { width: 70px; }
+  .row { display: grid; grid-template-columns: 44px 80px 1fr; gap: 8px; padding: 3px 0; border-bottom: 1px solid var(--line); }
+  .ok { color: var(--good); } .fail { color: var(--bad); } .muted { color: var(--muted); }
+  pre { white-space: pre-wrap; color: var(--muted); font-size: 12px; }
+</style>
+<h1>Overreach acceptance suites</h1>
+<div class="bar">
+  <button data-s="world">World</button><button data-s="economy">Economy</button><button data-s="battles">Battles</button>
+  <button data-s="sieges">Sieges</button><button data-s="war">War</button><button data-s="bugs">Known bugs</button>
+  <span class="muted">AI years</span><input id="years" value="60"><span class="muted">seed</span><input id="seed" value="1836">
+  <button data-s="ai">AI</button><button id="all">Run all but AI</button>
+</div>
+<div id="summary" class="muted"></div>
+<div id="out"></div>
+<pre id="log"></pre>
+<script>
+  // Every suite runs in its own worker. Results also land on window.RESULTS for scripted reading.
+  window.RESULTS = { checks: [], logs: [], stats: {}, done: [], errors: [] };
+  const $ = (id) => document.getElementById(id);
+  const esc = (t) => String(t).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  function summary() {
+    const c = RESULTS.checks, pass = c.filter((x) => x.ok).length;
+    $('summary').textContent = `${pass}/${c.length} passing · finished: ${RESULTS.done.map((d) => d.suite + ' ' + d.ms + 'ms').join(', ')}`;
+  }
+  function start(name, args) {
+    return new Promise((resolve) => {
+      const w = new Worker('worker.js?v=' + Date.now());
+      w.onmessage = (e) => {
+        const m = e.data;
+        if (m.type === 'check') {
+          RESULTS.checks.push(m);
+          $('out').insertAdjacentHTML('beforeend', `<div class="row"><span class="${m.ok ? 'ok' : 'fail'}">${m.ok ? 'PASS' : 'FAIL'}</span>
+            <span class="muted">${esc(m.suite)}</span><span>${esc(m.name)} <span class="muted">${esc(m.detail)}</span></span></div>`);
+        } else if (m.type === 'log') {
+          RESULTS.logs.push(m.text); $('log').textContent += m.text + '\n';
+        } else if (m.type === 'stats') {
+          RESULTS.stats[m.key] = m.stats; $('log').textContent += JSON.stringify(m.stats, null, 1) + '\n';
+        } else if (m.type === 'error') {
+          RESULTS.errors.push(m); $('log').textContent += 'ERROR ' + m.suite + ': ' + m.text + '\n';
+          w.terminate(); resolve();
+        } else if (m.type === 'done') {
+          RESULTS.done.push(m); w.terminate(); resolve();
+        }
+        summary();
+      };
+      w.postMessage({ name, args });
+    });
+  }
+  window.runSuites = async (list) => { for (const [n, a] of list) await start(n, a); };
+  document.querySelectorAll('[data-s]').forEach((b) => {
+    b.onclick = () => start(b.dataset.s, b.dataset.s === 'ai' ? [+$('years').value, $('seed').value] : []);
+  });
+  $('all').onclick = () => runSuites([['world'], ['economy'], ['battles'], ['sieges'], ['war'], ['bugs']]);
+  const q = new URLSearchParams(location.search).get('run');
+  if (q) runSuites(q.split(',').map((x) => { const [n, y, s] = x.split(':'); return n === 'ai' ? [n, [+(y || 60), s || '1836']] : [n]; }));
+</script>
