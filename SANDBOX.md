@@ -12,24 +12,24 @@ data: sources, rules, checks, names, Appendix A) still holds and feeds F3 below.
 
 ## 1. What the fork gives us for free (checked in the code)
 
-| We needed | OpenFront has it | Where |
-|---|---|---|
-| A deterministic tile simulation in a worker | Yes: pure TypeScript, a seeded PRNG, no floating-point maths | `src/core/` (49k lines), `GameRunner.ts`, `worker/`, `DetMath.ts` |
-| Commands, a command log, replays | Intents → Executions, turn records, a replay tool | `Schemas.ts`, `execution/ExecutionManager.ts`, `VersionedReplay.ts`, `npm run replay:game` |
-| Snapshots (undo, rewind) | `snapshotGame()` / `restoreGame()` | `src/core/snapshot/` |
-| A world tile map | World is 2000×1000 (652k land tiles). Giant World is 4000×2000. There are 130 maps in all | `resources/maps/` |
-| Enough nation ids | 12 bits per tile, so up to 4,095 players | `game/GameMap.ts` |
-| Fronts, expansion, attacks | Yes, including retreat and expansion into unowned land ("terra nullius") | `AttackExecution.ts`, `TerraNulliusImpl.ts` |
-| Boats and landings | Transport ships, warships, trade ships, ports | `TransportShipExecution.ts` and related files |
-| Structures | Cities, defence posts, factories, railways, missile silos, SAMs | `CityExecution.ts`, `DefensePostExecution.ts` and others |
-| Nukes | Atom bombs, MIRVs, a doomsday clock | `NukeExecution.ts`, `MIRVExecution.ts` |
-| Diplomacy | Alliances (requests, extensions), embargoes, donations | `execution/alliance/` and others |
-| AI | AI nations and roaming tribes | `NationExecution.ts`, `execution/nation/`, `TribeExecution.ts` |
-| Rendering and interface | Pixi.js (WebGL), Lit components, Tailwind, translations | `src/client/` (119k lines) |
-| Single-player with no server | Yes | `src/client/LocalServer.ts` |
-| Multiplayer | A Node server that relays intents | `src/server/` |
-| Maps from images | A Go generator reads a PNG (terrain from the blue channel) plus `info.json` (nations and spawn points) | `map-generator/` |
-| Tests | 534 test files in Vitest, speed scripts, a test-game helper | `tests/`, `tests/util/Setup.ts`, `npm run perf` |
+| We needed                                   | OpenFront has it                                                                                       | Where                                                                                      |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| A deterministic tile simulation in a worker | Yes: pure TypeScript, a seeded PRNG, no floating-point maths                                           | `src/core/` (49k lines), `GameRunner.ts`, `worker/`, `DetMath.ts`                          |
+| Commands, a command log, replays            | Intents → Executions, turn records, a replay tool                                                      | `Schemas.ts`, `execution/ExecutionManager.ts`, `VersionedReplay.ts`, `npm run replay:game` |
+| Snapshots (undo, rewind)                    | `snapshotGame()` / `restoreGame()`                                                                     | `src/core/snapshot/`                                                                       |
+| A world tile map                            | World is 2000×1000 (652k land tiles). Giant World is 4000×2000. There are 130 maps in all              | `resources/maps/`                                                                          |
+| Enough nation ids                           | 12 bits per tile, so up to 4,095 players                                                               | `game/GameMap.ts`                                                                          |
+| Fronts, expansion, attacks                  | Yes, including retreat and expansion into unowned land ("terra nullius")                               | `AttackExecution.ts`, `TerraNulliusImpl.ts`                                                |
+| Boats and landings                          | Transport ships, warships, trade ships, ports                                                          | `TransportShipExecution.ts` and related files                                              |
+| Structures                                  | Cities, defence posts, factories, railways, missile silos, SAMs                                        | `CityExecution.ts`, `DefensePostExecution.ts` and others                                   |
+| Nukes                                       | Atom bombs, MIRVs, a doomsday clock                                                                    | `NukeExecution.ts`, `MIRVExecution.ts`                                                     |
+| Diplomacy                                   | Alliances (requests, extensions), embargoes, donations                                                 | `execution/alliance/` and others                                                           |
+| AI                                          | AI nations and roaming tribes                                                                          | `NationExecution.ts`, `execution/nation/`, `TribeExecution.ts`                             |
+| Rendering and interface                     | Pixi.js (WebGL), Lit components, Tailwind, translations                                                | `src/client/` (119k lines)                                                                 |
+| Single-player with no server                | Yes                                                                                                    | `src/client/LocalServer.ts`                                                                |
+| Multiplayer                                 | A Node server that relays intents                                                                      | `src/server/`                                                                              |
+| Maps from images                            | A Go generator reads a PNG (terrain from the blue channel) plus `info.json` (nations and spawn points) | `map-generator/`                                                                           |
+| Tests                                       | 534 test files in Vitest, speed scripts, a test-game helper                                            | `tests/`, `tests/util/Setup.ts`, `npm run perf`                                            |
 
 **Ownership choke point:** every tile ownership change goes through `GameImpl.conquer()` and `GameImpl.relinquish()`
 (`src/core/game/GameImpl.ts` ~799 and ~823). The only other writer is snapshot restore. So the province layer needs
@@ -51,15 +51,15 @@ exactly two hooks.
 
 ## 3. Licence: the terms and how we meet them
 
-| Term | What it means for Overreach |
-|---|---|
-| Code is **AGPL-3.0** | All Overreach code becomes AGPL-3.0 too. If *other people* play it over a network, the game shows a **"Source" link** to a public copy of our code. Using it privately has no publishing duty. |
-| Section 7(b): keep **"© OpenFront and Contributors"** visible (footer, loading screen, splash or main menu) | Keep their notice where it is now, on the footer and loading screen. |
-| Section 7(c): don't misrepresent the origin, don't use "OpenFront" as the main title, don't imply endorsement | The game is called **Overreach**. The About screen says "Built on OpenFront (AGPL-3.0)". |
-| `/resources` assets are **CC BY-SA 4.0** | Credit "OpenFront". Any modified asset stays CC BY-SA. |
-| `/proprietary` is **all rights reserved** (logo, favicon, font, music, the game-start sound) | **Delete it** and replace with our own or free assets. Make sure the build no longer tries to use it. |
-| Their CDN, database and API assets (skins, cosmetics) and their closed API (accounts, stats, payments) | Never fetch or call them. Disconnect the API and hide the features that need it. |
-| Our 1836 border data (`historical-basemaps`, GPL-3.0) | Compatible: GPLv3 section 13 allows combining with AGPLv3. |
+| Term                                                                                                          | What it means for Overreach                                                                                                                                                                    |
+| ------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Code is **AGPL-3.0**                                                                                          | All Overreach code becomes AGPL-3.0 too. If _other people_ play it over a network, the game shows a **"Source" link** to a public copy of our code. Using it privately has no publishing duty. |
+| Section 7(b): keep **"© OpenFront and Contributors"** visible (footer, loading screen, splash or main menu)   | Keep their notice where it is now, on the footer and loading screen.                                                                                                                           |
+| Section 7(c): don't misrepresent the origin, don't use "OpenFront" as the main title, don't imply endorsement | The game is called **Overreach**. The About screen says "Built on OpenFront (AGPL-3.0)".                                                                                                       |
+| `/resources` assets are **CC BY-SA 4.0**                                                                      | Credit "OpenFront". Any modified asset stays CC BY-SA.                                                                                                                                         |
+| `/proprietary` is **all rights reserved** (logo, favicon, font, music, the game-start sound)                  | **Delete it** and replace with our own or free assets. Make sure the build no longer tries to use it.                                                                                          |
+| Their CDN, database and API assets (skins, cosmetics) and their closed API (accounts, stats, payments)        | Never fetch or call them. Disconnect the API and hide the features that need it.                                                                                                               |
+| Our 1836 border data (`historical-basemaps`, GPL-3.0)                                                         | Compatible: GPLv3 section 13 allows combining with AGPLv3.                                                                                                                                     |
 
 Their `LICENSE`, `LICENSE-ASSETS`, `LICENSING.md` and `CREDITS.md` stay in the repo. We add our own copyright line for
 our changes.
@@ -91,8 +91,17 @@ our changes.
 ## 5. Milestones
 
 ### F0: Set up (1–2 sessions)
+
+**Status (28 Sep 2026): done, except pushing to GitHub** (the GitHub connector can't create repos; the user creates
+the empty private repo). Checked: lint clean; production build passes; tests pass apart from the known machine
+quirks listed in `CLAUDE.md`; a 50-bot single-player game on World starts, spawns and expands in headless Chrome;
+network traffic goes only to the local server, the absent local API (`localhost:8787`) and OpenFront's YouTube
+tutorial video. Left for later: the "Use verified" name button, sounds and music (none yet), and translations in
+other languages still say OpenFront.
+
 Measured 28 Sep: 36 interface files call OpenFront's API or login, and 18 are store, ads, Steam or cosmetics code.
 Their notice string lives in `resources/lang/en.json` under `"copyright"`; keep it.
+
 1. **Save the old engine:** `git init` in `Overreach/`, commit the current files, then move them to `legacy/`.
 2. **Get the fork:**
    - fork `openfrontio/OpenFrontIO` into your GitHub account, clone it into `Overreach/`, and add `upstream`;
@@ -115,6 +124,7 @@ Their notice string lives in `resources/lang/en.json` under `"copyright"`; keep 
 any `openfront.io` host.
 
 ### F1: Sandbox mode v1
+
 - **A "Sandbox" game mode** in `SinglePlayerModal`, plus a `sandbox` flag in the game config.
 - **New intents:**
   - paint territory (a tile list, owner or none);
@@ -137,6 +147,7 @@ any `openfront.io` host.
 - **Done when:** you can paint two nations on World, make them fight, pause, step and undo, and the replay reproduces it.
 
 ### F2: Scenario starts (pre-drawn territory)
+
 - A map folder can carry `owners.png` plus `scenario.json`: nations (tag, name, colour, flag, owner colour), alliances
   and wars.
 - A start execution gives each nation its tiles through `conquer()`, so the choke point holds, and skips the spawn phase.
@@ -147,6 +158,7 @@ any `openfront.io` host.
   - Most OpenFront games start with small spawns, not a full map, so **measure this first**.
 
 ### F3: The World 1836 map
+
 - `tools/export_openfront.py` downsamples our terrain to 2000×1000:
   - water and lakes use blue 106;
   - plains, hills and mountains map to their elevation ranges (blue 140–200).
@@ -156,6 +168,7 @@ any `openfront.io` host.
   Americas, India and Africa on screen.
 
 ### F4: Provinces
+
 - **Core** (`src/core/overreach/Provinces.ts`):
   - a Uint16 province per tile, plus province records;
   - one hook in `conquer()` and one in `relinquish()`;
@@ -175,6 +188,7 @@ any `openfront.io` host.
   - a split keeps the tile total.
 
 ### F5: Named cities
+
 - OpenFront's City is a building that raises the population cap. Extend it with a name, population, founding tick and
   province-capital role.
 - Place named cities from our towns data on World 1836.
@@ -183,6 +197,7 @@ any `openfront.io` host.
 - **Checks:** founding respects spacing; capturing a province's capital city flips the province (F4 rule).
 
 ### F6: Diplomacy additions
+
 - Puppets and vassals.
 - Revolts and civil wars that split off whole provinces into a new nation.
 - Coalitions against aggressive nations (`legacy/HANDOFF.md` §2: "an alliance must be able to beat a great power").
@@ -190,12 +205,14 @@ any `openfront.io` host.
 - **Checks:** a civil war splits off whole provinces; an allied pair beats a stronger single nation in most seeds.
 
 ### F7: Grand-strategy layer
+
 - A calendar mapping turns to dates, 1836 → 2036.
 - Eras that unlock OpenFront's modern features: nukes, SAMs and trains in later eras, not in 1836.
 - Province economy, events, decisions and formable nations, from `ROADMAP.md` M8–M13, adapted.
 - The endings from `legacy/HANDOFF.md` §2.
 
 ### F8: Hosting
+
 - **Single-player and sandbox:** a static build (the client plus `LocalServer`) can go on any static host:
   Vercel, Cloudflare Pages, GitHub Pages or a claude.ai artifact (check the file count and size then).
 - **Before anyone else plays:** make the repo public and wire up the Source link.

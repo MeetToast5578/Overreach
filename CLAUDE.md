@@ -85,3 +85,24 @@ Tests use a `setup()` helper from `tests/util/Setup.ts` that creates a full game
 - **Schemas/Validation:** Zod
 - **Testing:** Vitest
 - **Server:** Node.js, Express, ws (WebSocket)
+
+## Overreach fork
+
+This repo is **Overreach**, a fork of OpenFront (AGPL-3.0). The plan is `SANDBOX.md` (F0–F8); `ROADMAP.md` §3
+holds the 1836 world data. `legacy/` is the pre-fork engine, read-only.
+
+- Our code lives in `src/core/overreach/`, `src/client/overreach/`, `tests/overreach/`. Changes to upstream files are
+  one-line hooks, and features we don't use are hidden (`src/client/overreach/overreach.css`), not deleted, so
+  `git merge upstream/main` stays cheap.
+- Keep "© OpenFront™ and Contributors" (`resources/lang/en.json` → `copyright`) visible. Never call the game OpenFront.
+- `proprietary/` holds Overreach's own assets under OpenFront's file names; none of OpenFront's remain there.
+- Never call OpenFront's API or CDN. Builds without `DOMAIN` point the API at localhost.
+- On this machine: npm 11.19, so install with `npm ci --ignore-scripts --engine-strict=false` until npm 12.1.0 is
+  installed. `tests/UpdateRegister.test.ts` fails without `jq` (a deploy-script test, not ours), and
+  `MainInitialize`/`InventoryModal` can time out under full-suite load but pass alone.
+- `tests/server/RenderHtml.test.ts` fails whenever a build exists in `static/` (upstream behaviour); delete `static/`
+  before running the full suite.
+- Browser checks on Windows: `.claude/skills/run-openfront/` targets Ubuntu. Copy `driver.mjs` and `game.mjs` to a
+  scratch folder, `npm i playwright-core` there, import from `playwright-core`, launch with
+  `executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe"` and `--enable-unsafe-swiftshader`, and
+  change the start button key from `single_modal.start` to `game_settings.start`.

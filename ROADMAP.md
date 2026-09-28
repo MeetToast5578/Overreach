@@ -18,30 +18,30 @@ parts that were missing. Read `legacy/HANDOFF.md` §1 (rules), §2 (decided dire
   cavalry, artillery), battles, sieges, wars with casus belli, war score, peace deals, alliances, opinion,
   aggressive expansion (AE), claims, cores, revolts, an AI and an observer mode.
 - Tests: 39/39 in the main suites and 9/9 in `ai:20:check`.
-- **The problem the user raised:** the nations are the 241 *modern* countries from Natural Earth, dropped into 1836,
+- **The problem the user raised:** the nations are the 241 _modern_ countries from Natural Earth, dropped into 1836,
   so the map shows Pakistan, Germany and South Sudan in 1836.
 
 ## 2. What "proper EU4 / AoH3 clone" means here: the gaps
 
-| System | Now | Target | Milestone |
-|---|---|---|---|
-| Countries & borders | 241 modern countries | The world on 1 January 1836: about 250 states, subjects, colonies, unowned land | M1–M4 |
-| Nation identity | numeric id, max 255 | tags (`GBR`, `PRU`, `OTT`), no hard cap, flags, historical colours | M1, M4 |
-| Country names on the map | none | EU4-style names drawn across each country | M2 |
-| Scenario editor | none | paint owners and cores in-game, export (AoH3 has one) | M3 |
-| Colonisation & natives | none (every province owned) | unowned land, colonists, native peoples | M5 |
-| Coalitions, fort ZoC, pacing | planned (old phase 3) | same, balanced on the 1836 map | M6 |
-| Save / load | planned (old 4) | by tag, so saves survive map rebuilds | M7 |
-| Stability, prestige, loans, government | planned (old 5) | plus government types | M8 |
-| Diplomacy & subjects | planned (old 6) | plus German Confederation, tributaries, releasing nations | M9 |
-| Armies, rebels, buildings, navy | planned (old 7) | plus generals, canals by year | M10 |
-| Religion, culture, tech, ideas | planned (old 8) | plus nationalism and era-based units | M11 |
-| Trade | planned (old 9) | plus trade goods and resources by era (coal, oil, rubber) | M12 |
-| Events, decisions, formable nations | none | historical events, decisions such as forming Germany or Italy | M13 |
-| EU4-style interface | a side panel and windows | top bar, nation window, outliner, ledger, alerts, tooltips with breakdowns, map modes | M14 |
-| Endings, nukes | planned (old 10) | unchanged | M15 |
-| Polish | planned (old 11) | unchanged | M16 |
-| More start dates | one | 1861, 1871, 1914 and 1936 from the same pipeline | M17 |
+| System                                 | Now                         | Target                                                                                | Milestone |
+| -------------------------------------- | --------------------------- | ------------------------------------------------------------------------------------- | --------- |
+| Countries & borders                    | 241 modern countries        | The world on 1 January 1836: about 250 states, subjects, colonies, unowned land       | M1–M4     |
+| Nation identity                        | numeric id, max 255         | tags (`GBR`, `PRU`, `OTT`), no hard cap, flags, historical colours                    | M1, M4    |
+| Country names on the map               | none                        | EU4-style names drawn across each country                                             | M2        |
+| Scenario editor                        | none                        | paint owners and cores in-game, export (AoH3 has one)                                 | M3        |
+| Colonisation & natives                 | none (every province owned) | unowned land, colonists, native peoples                                               | M5        |
+| Coalitions, fort ZoC, pacing           | planned (old phase 3)       | same, balanced on the 1836 map                                                        | M6        |
+| Save / load                            | planned (old 4)             | by tag, so saves survive map rebuilds                                                 | M7        |
+| Stability, prestige, loans, government | planned (old 5)             | plus government types                                                                 | M8        |
+| Diplomacy & subjects                   | planned (old 6)             | plus German Confederation, tributaries, releasing nations                             | M9        |
+| Armies, rebels, buildings, navy        | planned (old 7)             | plus generals, canals by year                                                         | M10       |
+| Religion, culture, tech, ideas         | planned (old 8)             | plus nationalism and era-based units                                                  | M11       |
+| Trade                                  | planned (old 9)             | plus trade goods and resources by era (coal, oil, rubber)                             | M12       |
+| Events, decisions, formable nations    | none                        | historical events, decisions such as forming Germany or Italy                         | M13       |
+| EU4-style interface                    | a side panel and windows    | top bar, nation window, outliner, ledger, alerts, tooltips with breakdowns, map modes | M14       |
+| Endings, nukes                         | planned (old 10)            | unchanged                                                                             | M15       |
+| Polish                                 | planned (old 11)            | unchanged                                                                             | M16       |
+| More start dates                       | one                         | 1861, 1871, 1914 and 1936 from the same pipeline                                      | M17       |
 
 Standing decisions from `legacy/HANDOFF.md` §2 still apply: no monarch points, no estates, the timeline runs 1836 → 2036,
 and the endings don't change.
@@ -51,7 +51,9 @@ and the endings don't change.
 ## 3. The 1836 world: how to get real borders
 
 ### 3.1 Why recolouring the current provinces isn't enough
+
 The provinces are cut from **modern** borders and modern admin-1 states. Many 1836 borders run through those units:
+
 - Germany has **46 provinces** today, but the German Confederation had about 39 states.
 - Other borders that cross modern units: the partitions of Poland (Posen, Congress Poland, Galicia), Savoy and Nice
   (then Sardinian), Schleswig, Hyderabad, the Texas–Mexico line, and the Afghan–Sikh frontier.
@@ -63,18 +65,22 @@ stay in the geometry, so countries that appear later (Germany, Poland, Yugoslavi
 have clean borders when they form.
 
 ### 3.2 Data source (checked 28 Sep 2026)
+
 The source is **`aourednik/historical-basemaps`, `geojson/world_1815.geojson`**:
+
 - 436 features and 316 named polities.
 - `SUBJECTO` names the colonial overlord.
 - Licence: **GPL-3.0**.
 - It has no 1836 file. The nearest are 1815 and 1878/1880.
 
 What 1815 gets right for 1836:
+
 - Europe's Congress of Vienna settlement, including the German and Italian states.
 - Most of Asia.
 - Many African kingdoms.
 
 What must be patched for 1836:
+
 - Latin America is still Spanish viceroyalties.
 - It shows the Maratha Confederacy, which ended in 1818.
 - Hong Kong is shown as British, which only happened in 1841.
@@ -114,6 +120,7 @@ Natural Earth (existing) ───> tools/build_map.py stage 2: region key = (mo
    HAI    iso3=HTI,DOM                               # Haiti holds all of Hispaniola, 1822–44
    -      polity~"Australian aboriginal"|<Aboriginal group names>   # '-' = unowned
    ```
+
 3. **Cut the provinces.** In stage 2 of `build_map.py`:
    - The region key becomes (modern nation, admin-1, 1836 polity).
    - Pixels on an 1836 border are walls during growth.
@@ -139,6 +146,7 @@ Natural Earth (existing) ───> tools/build_map.py stage 2: region key = (mo
    - Rough area checks for Russia, the US, Mexico, the Qing and the Ottomans.
 
 ### 3.4 Who owns what (defaults: see §6 to change them)
+
 - **Owned:** land a state ran or whose sovereignty other powers recognised. The US to the Rockies, Mexico's north,
   Russian Alaska, Hudson's Bay Company land and Qing Outer Manchuria count. So the political map matches period maps.
   The frontier shows up as low population and development, and as native unrest.
@@ -151,6 +159,7 @@ Natural Earth (existing) ───> tools/build_map.py stage 2: region key = (mo
   and the Caucasian Imamate.
 
 ### 3.5 Subjects, leagues, alliances and wars on 1 January 1836
+
 - **Personal unions:**
   - UK–Hanover (it ends in June 1837, so it can be an event)
   - Sweden–Norway
@@ -179,6 +188,7 @@ Natural Earth (existing) ───> tools/build_map.py stage 2: region key = (mo
   - The Second Seminole War: the US vs the Seminole.
 
 ### 3.6 Names that fit the date
+
 - **Town names over time.** `scenario/names.txt` maps modern names to historical ones with year ranges, e.g.
   Istanbul → Constantinople (until 1930), Mumbai → Bombay, Chennai → Madras, Kolkata → Calcutta, Tokyo → Edo (until 1868),
   Jakarta → Batavia, Oslo → Christiania, Helsinki → Helsingfors, Gdańsk → Danzig, Wrocław → Breslau,
@@ -195,8 +205,9 @@ Natural Earth (existing) ───> tools/build_map.py stage 2: region key = (mo
 ## 4. Architecture changes (M1)
 
 **Move nations out of the map.**
+
 - `World` keeps the geometry. The modern-country column becomes the **homeland layer**: the 241 modern countries are
-  now *future* nations for nationalism, releases, formables and decolonisation.
+  now _future_ nations for nationalism, releases, formables and decolonisation.
 - A scenario file brings the date's nations:
   - `World.useScenario(SCENARIO)` fills `NAT`, `IDS` and `CAPITAL` from the scenario.
   - It adds `W.startOwner(i)`, `W.cores(i)` and `W.homeland(i)`.
@@ -204,6 +215,7 @@ Natural Earth (existing) ───> tools/build_map.py stage 2: region key = (mo
 - Almost everything else only calls `W.nation(id)`, `W.nations()`, `W.colour(id)` or `W.capital(id)`, so it keeps working.
 
 **Tags, and no cap on nation count.**
+
 - Data files and saves use 3-letter tags. Numeric ids are assigned at load.
 - Arrays are sized to the scenario (`NN = nations + 2`), not to 256. Nation-id arrays move from `Uint8Array` to
   `Uint16Array`.
@@ -213,6 +225,7 @@ Natural Earth (existing) ───> tools/build_map.py stage 2: region key = (mo
 - The rebel id becomes `NN − 1`, not 255.
 
 **Refactor-safety check.** A "modern" scenario generated from today's `mapdata.js` (owner = `nationOf`) must give:
+
 - 39/39 and 9/9;
 - a byte-identical hash of owner, control and population after 20 years on seed `1836`, before and after the refactor.
 
@@ -226,6 +239,7 @@ Each milestone follows the `legacy/HANDOFF.md` rules: write the failing check fi
 each one, and ask the user to open the game after visible changes.
 
 ### M0: Housekeeping (short)
+
 1. **`git init` and a first commit.** M1 touches about 50 lines across 5 files, so there needs to be a way back. There's
    no version control today.
 2. **One project folder.** Move `tools/` and `build/` from `../My Map Game/` into `Overreach/` and fix `OUT` in
@@ -234,27 +248,33 @@ each one, and ask the user to open the game after visible changes.
 3. Serve the folder with `python -m http.server 8766`, then confirm 39/39 and 9/9.
 
 ### M1: Nation layer: tags, scenario loader, no nation cap
+
 As in §4.
+
 - **Checks first:** the modern-scenario hash is equal before and after; a 600-nation scenario loads and runs a year;
   a save-free tag lookup round-trips.
 - **Done when:** all suites pass, and speed is ≤ 4 ms a day on the modern scenario.
 
 ### M2: 1836 borders and country labels
+
 Build `tools/build_scenario.py`, `scenario/1836.rules` and the stage-2 cut (§3.3), then the asserts (§3.3.5).
 
 **Country names on the map** are the biggest single "this is EU4" win:
+
 - Fit a curve through each nation's province centroids along its main axis (weighted by area), and size the text to the
   country's extent.
 - Recompute only for nations whose borders changed.
 - Hide the label below a size threshold.
 
 **Done when:**
+
 - the asserts pass;
 - the user signs off Europe, the Americas, India and Africa on screen;
 - speed is under 12 ms a day with about 250 nations;
 - the old baselines are retired, because they were measured on the modern world.
 
 ### M3: Scenario editor (AoH3-style)
+
 - An editor mode that paints province owner or cores with a tag picker and edits the nations table (name, colour,
   capital).
 - **Export** writes rule lines (`TAG town="…"` or `TAG point=lon,lat`), never province ids, which get appended to
@@ -263,6 +283,7 @@ Build `tools/build_scenario.py`, `scenario/1836.rules` and the stage-2 cut (§3.
 - **Done when:** a painted fix survives a full map rebuild.
 
 ### M4: 1836 world content
+
 - **Nations table:** tag, name, colour, flag, government, primary culture, religion, tech group, capital town.
   - Colours: hand-pick about 60 EU4-style ones for the majors (France blue, Britain red, Russia green, Prussia
     grey-blue, Austria white, Ottomans teal) and keep the builder's colours for the rest.
@@ -285,6 +306,7 @@ Build `tools/build_scenario.py`, `scenario/1836.rules` and the stage-2 cut (§3.
   every starting war appears in the dispatches on day 1; and the flags render.
 
 ### M5: Unowned land, natives, colonisation
+
 - **Owner 0 means unowned.** The engine has to accept it in `refreshEconomy`, `canEnter`, painting and AI targeting:
   - armies may cross it and take attrition;
   - it pays no income and needs no siege.
@@ -303,23 +325,30 @@ Build `tools/build_scenario.py`, `scenario/1836.rules` and the stage-2 cut (§3.
   - An 80-year AI run claims most of Africa by about 1900. This one is a soft target.
 
 ### M6: Pacing and balance (old phase 3)
+
 Coalitions, fort zones of control, fast occupation of unfortified land, and world share by true area, on the 1836 map.
 Keep the old targets, but measure on 1836 nations (e.g. "no AI passes 15% of the world's true area", "coalitions win most of their wars"),
 and save the result as `tests/baseline-m6.json`.
 
 ### M7: Save and load (old phase 4)
+
 As planned, with two changes:
+
 - The save header carries the scenario id plus `mapHash`.
 - Nations are stored by tag, so a save refuses to load on another map instead of silently mixing nations.
 
 ### M8: The do-nothing numbers, plus government (old phase 5)
+
 Stability, prestige, loan caps, bankruptcy, claim timers, difficulty and universities, as planned. On top of that:
+
 - **Government types:** absolute monarchy, constitutional monarchy, republic, theocracy, tribal and chartered company.
   Each carries small modifiers (stability, AE, ally cap, unrest).
 - Reforms that come with later eras belong to M11 and M13.
 
 ### M9: Diplomacy and subjects (old phase 6)
+
 Everything planned for old phase 6, plus:
+
 - **German Confederation:** members get a defensive call to arms against outsiders. Austria and Prussia compete for the
   presidency. It dissolves on a war between members' leaders or when Germany forms (M13). This is HRE-lite.
 - **Tributaries:** no annexing, an opinion bond and a yearly payment. They can break away when the overlord is weak.
@@ -327,12 +356,16 @@ Everything planned for old phase 6, plus:
 - **Release a nation from the homeland layer,** EU4-style, as a vassal or as free.
 
 ### M10: Armies, rebels, buildings, navy (old phase 7)
+
 As planned, plus:
+
 - **Generals** (fire, shock, manoeuvre and siege pips, drawn from army tradition).
 - **Canals by year:** Suez 1869, Kiel 1895 and Panama 1914 as navy data.
 
 ### M11: Religion, culture, technology, ideas (old phase 8)
+
 The data already exists from M4, so this is mechanics only. Plus:
+
 - **Nationalism:** provinces whose homeland differs from the owner build separatism, which feeds revolts and
   independence wars. This is how the 1836 map turns into something like the modern one by 2036 without scripting it:
   Belgium's model, the Balkans, Latin America, then decolonisation.
@@ -340,13 +373,16 @@ The data already exists from M4, so this is mechanics only. Plus:
   so an 1836 army can't beat a 1950 army.
 
 ### M12: Trade and goods (old phase 9)
+
 Trade nodes as planned, plus a **trade good per province**:
+
 - Goods: grain, livestock, wool, cotton, sugar, coffee, tea, tobacco, spices, silk, timber, fish, iron, coal, copper,
   gold, oil and rubber.
 - Prices change by era: coal matters from Railways, oil from the Machine Age, rubber from 1890.
 - Add a goods map mode. The Monopoly metric is unchanged.
 
 ### M13: Events, decisions, formable nations (new)
+
 - **Event engine:** `data/events-1836.js` holds `{id, after, before, who, trigger(s,id), title, text, options:[{label, effect(s,id)}]}`.
   - Triggers are plain JS functions, not a scripting language.
   - The AI picks options by weight.
@@ -361,6 +397,7 @@ Trade nodes as planned, plus a **trade good per province**:
 - **Random events:** harvests, epidemics, gold rushes (California in 1848 if owned) and inventions.
 
 ### M14: EU4-style interface (new)
+
 - **Start screen:** the bookmark (date and a short blurb), click the map to pick a nation, recommended nations with flag
   and difficulty.
 - **Top bar:** treasury (with the monthly change), manpower, stability, prestige, AE, war exhaustion, colonists, date and speed.
@@ -381,6 +418,7 @@ Trade nodes as planned, plus a **trade good per province**:
 ### M16: Polish (old phase 11), unchanged
 
 ### M17: More start dates
+
 - Bookmarks in 1861, 1871, 1914 and 1936 use the same pipeline: `world_1880`, `world_1914` and `world_1938` as bases,
   plus rule deltas.
 - **Province cuts must be the union of every bookmark's borders,** so build all bookmark geometry in one rebuild.
@@ -401,6 +439,7 @@ Trade nodes as planned, plus a **trade good per province**:
 7. **More start dates later (M17):** yes.
 
 ## 7. Risks
+
 - **Speed with ~250 nations.** Measure in M1 with the synthetic 600-nation scenario. The AI rota already spreads the work.
 - **Province ids change on every rebuild.** Tests and rules must pick provinces by town name or point, never by id.
 - **Historical accuracy is a rabbit hole.** The asserts list defines "correct". Anything else goes through the editor (M3)
@@ -413,6 +452,7 @@ Trade nodes as planned, plus a **trade good per province**:
 ## Appendix A: 1 January 1836 checklist (verify each against sources in M2; about 230–260 nations)
 
 **Europe**
+
 - **Great powers:**
   - Britain (plus Hanover in union, the Ionian Islands, Malta)
   - France (the July Monarchy, plus coastal Algeria)
@@ -442,6 +482,7 @@ Trade nodes as planned, plus a **trade good per province**:
   - Plus the Austrian, Prussian, Danish (Holstein) and Dutch (Luxembourg) member lands
 
 **Americas**
+
 - **United States:** 24 states, plus the Michigan, Arkansas and Florida territories and unorganised land to the Rockies.
 - **Texas,** in revolt.
 - **Mexico,** including California, New Mexico and Yucatán.
@@ -465,6 +506,7 @@ Trade nodes as planned, plus a **trade good per province**:
 - **Tribal:** Comanche, Lakota, Seminole and Mapuche. Patagonia is unowned.
 
 **Africa**
+
 - **North:**
   - Morocco
   - Abdelkader's emirate (the western interior) and the Beylik of Constantine (the eastern interior, until 1837)
@@ -499,6 +541,7 @@ Trade nodes as planned, plus a **trade good per province**:
   - The Griqua states and the Gaza Empire
 
 **Asia**
+
 - **Middle East:**
   - The Ottoman Empire (Anatolia and Iraq)
   - Egypt (the Levant and the Hejaz)
@@ -539,6 +582,7 @@ Trade nodes as planned, plus a **trade good per province**:
   - The Spanish Philippines and Portuguese Timor
 
 **Oceania**
+
 - British settled districts: New South Wales, Van Diemen's Land and the Swan River. Aboriginal land is unowned.
 - The Māori United Tribes, Hawaii, Tahiti, Tonga (chiefdoms), Fiji (Bau) and Samoa.
 - New Guinea is unowned.

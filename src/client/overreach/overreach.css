@@ -1,0 +1,47 @@
+/* Overreach: hide OpenFront features that need OpenFront's closed API or are
+   their commerce (store, accounts, cosmetics, ranked, promos, streams, Steam).
+   Hidden rather than deleted so upstream merges stay cheap. */
+[data-page="page-item-store"],
+[data-page="page-inventory"],
+[data-page="page-clan"],
+[data-page="page-leaderboard"],
+nav-account-menu,
+token-login,
+rewards-modal,
+news-box,
+cosmetic-background,
+streaming-now,
+steam-wishlist,
+homepage-promos,
+marketing-consent-toast,
+purchase-nudge-modal,
+in-game-promo,
+featured-stream,
+#turnstile-container {
+  display: none !important;
+}
+
+/* ponytail: the Ranked card has no id; it's the 2nd card in GameModeSelector's
+   create/ranked/join row. Breaks if upstream reorders that row; then drop the card
+   in GameModeSelector.ts instead. */
+game-mode-selector .grid-cols-3.h-14 > :nth-child(2) {
+  display: none !important;
+}
+
+/* Footer: OpenFront's community links, policies and Steam button are theirs, and showing
+   them would imply Overreach is official. The GitHub link to OpenFront's source and the
+   "© OpenFront and Contributors" notice stay (AGPL section 7). */
+a[href="https://www.reddit.com/r/OpenFront/"],
+a[href="https://discord.gg/openfront"],
+a[href="https://openfront.wiki/Main_Page"],
+a[href="/terms-of-service.html"],
+a[href="/privacy-policy.html"],
+steam-wishlist-button {
+  display: none !important;
+}
+
+/* ponytail: SinglePlayerModal's "Sign in for achievements" banner has no id; it's the
+   only yellow button in the modal. Breaks if upstream restyles it. */
+single-player-modal button.bg-yellow-500\/20 {
+  display: none !important;
+}

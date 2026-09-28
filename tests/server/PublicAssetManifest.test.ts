@@ -386,13 +386,16 @@ describe("PublicAssetManifest", () => {
     expect(() => buildRootFilesIndex(publicDir)).toThrow(/press\/kit\.xyz/);
   });
 
-  test("indexes the real resources/public/, policy pages included", () => {
+  // Overreach ships none of OpenFront's policy pages, press kit or Apple Pay
+  // domain file: they describe OpenFront's service, not this fork.
+  test("indexes the real resources/public/, without OpenFront's service pages", () => {
     const index = buildRootFilesIndex(getPublicDir(path.resolve("resources")));
-    expect(index["privacy-policy.html"]).toBe("text/html; charset=utf-8");
-    expect(index["terms-of-service.html"]).toBe("text/html; charset=utf-8");
+    expect(index["robots.txt"]).toBe("text/plain; charset=utf-8");
+    expect(index["privacy-policy.html"]).toBeUndefined();
+    expect(index["terms-of-service.html"]).toBeUndefined();
     expect(
       index[".well-known/apple-developer-merchantid-domain-association"],
-    ).toBe("text/plain; charset=utf-8");
-    expect(index["press/"]).toBe("text/html; charset=utf-8");
+    ).toBeUndefined();
+    expect(index["press/"]).toBeUndefined();
   });
 });

@@ -176,6 +176,7 @@ import "./components/PlayPage";
 import "./components/RankedModal";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
+import "./overreach/overreach.css";
 import "./styles.css";
 import "./styles/core/typography.css";
 import "./styles/core/variables.css";
@@ -679,10 +680,8 @@ class Client {
       } else {
         updateAccountNavButton(userMeResponse);
       }
-      const isAdFree =
-        userMeResponse !== false && userMeResponse.player?.adfree === true;
-      window.adsEnabled =
-        !isAdFree && !crazyGamesSDK.isOnCrazyGames() && !isDesktopShell();
+      // Overreach: no ads, so Admiral and the ad gatekeeper never load.
+      window.adsEnabled = false;
       // Ad-eligible users only: paid/adfree users must never load Admiral (its
       // adblock popup fires autonomously once the payload runs). Start watching
       // adblock state; once a blocker is ever detected the in-game ad is

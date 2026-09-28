@@ -15,15 +15,11 @@ Attribution required: "OpenFront" or "OpenFront Inc."
 To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/
 or send a letter to Creative Commons, PO Box 1866, Mountain View, CA 94042, USA.
 
-## Proprietary Assets (/proprietary) - All Rights Reserved
+## Overreach Assets (/proprietary)
 
-Assets in the `/proprietary` directory are:
-- Copyright © 2024-2026 OpenFront Inc. and Contributors
-- All Rights Reserved
-- NOT licensed for use, modification, or redistribution outside of OpenFront
-- May only be used as part of the complete OpenFront software package
-
-See `/proprietary/LICENSE` for full terms.
+In Overreach, OpenFront's proprietary assets have been removed from `/proprietary`
+and replaced with Overreach's own assets under the same file names. See
+`/proprietary/LICENSE` for their terms.
 
 ## External/Proprietary Assets (Not in Repository)
 
