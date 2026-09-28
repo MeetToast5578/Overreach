@@ -141,6 +141,14 @@ export function authorizeIntent(
       }
       return null;
 
+    case "sandbox":
+      // Overreach: god-mode edits are the host's, and never in public games.
+      // SandboxExecution also requires the sandbox game config.
+      if (!actor.isLobbyCreator || game.isPublic || game.isListed) {
+        return { status: 403, error: "sandbox edits are host-only, private" };
+      }
+      return null;
+
     default:
       // Gameplay intents: websocket players only.
       if (actor.isAdminBot) {

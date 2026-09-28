@@ -29,6 +29,8 @@ import { TribeSpawner } from "./TribeSpawner";
 import { UpgradeStructureExecution } from "./UpgradeStructureExecution";
 import { PlayerSpawner } from "./utils/PlayerSpawner";
 
+import { SandboxExecution } from "../overreach/SandboxExecution";
+
 export class Executor {
   // private random = new PseudoRandom(999)
   private random: PseudoRandom;
@@ -139,6 +141,8 @@ export class Executor {
         return new MarkDisconnectedExecution(player, intent.isDisconnected);
       case "toggle_pause":
         return new PauseExecution(player, intent.paused);
+      case "sandbox":
+        return new SandboxExecution(this.gameID_, player, intent.action);
       default:
         throw new Error(`intent type ${intent} not found`);
     }

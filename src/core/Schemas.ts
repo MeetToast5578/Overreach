@@ -23,6 +23,7 @@ import {
   Trios,
   UnitType,
 } from "./game/Game";
+import { SandboxIntent, SandboxIntentSchema } from "./overreach/Sandbox";
 import { ArchivedPlayerStatsSchema, PlayerStatsSchema } from "./StatsSchemas";
 import { flattenedEmojiTable, LOBBY_LABEL_MAX } from "./Util";
 
@@ -54,7 +55,8 @@ export type Intent =
   | KickPlayerIntent
   | TogglePauseIntent
   | UpdateGameConfigIntent
-  | ToggleGameStartTimer;
+  | ToggleGameStartTimer
+  | SandboxIntent;
 
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
@@ -565,6 +567,7 @@ export const GameConfigSchema = z.object({
   infiniteGold: z.boolean(),
   infiniteTroops: z.boolean(),
   instantBuild: z.boolean(),
+  sandbox: z.boolean().optional(), // Overreach sandbox mode: god-mode intents allowed
   disableNavMesh: z.boolean().optional(),
   disableAlliances: z.boolean().nullable().optional(),
   disableClanTags: z.boolean().optional(),
@@ -844,6 +847,7 @@ export const IntentSchema = z.discriminatedUnion("type", [
   TogglePauseIntentSchema,
   UpdateGameConfigIntentSchema,
   ToggleGameStartTimerIntentSchema,
+  SandboxIntentSchema,
 ]);
 
 // StampedIntent = Intent with server-stamped clientID (used in turns and execution)
