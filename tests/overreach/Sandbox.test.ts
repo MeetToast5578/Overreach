@@ -89,17 +89,23 @@ describe("Sandbox", () => {
 
   test("create_nation spawns an AI nation at the tile", () => {
     const tile = game.ref(50, 50);
-    run({ kind: "create_nation", tile, name: "Prussia" }, 3);
+    run({ kind: "create_nation", id: "prussia1", tile, name: "Prussia" }, 3);
     const nation = game.players().find((p) => p.name() === "Prussia");
     expect(nation).toBeDefined();
     expect(nation!.type()).toBe(PlayerType.Nation);
     expect(nation!.numTilesOwned()).toBeGreaterThan(0);
+    expect(nation!.id()).toBe("prussia1");
+
+    // An id in use is ignored.
+    run({ kind: "create_nation", id: "prussia1", tile, name: "Again" }, 3);
+    expect(game.players().some((p) => p.name() === "Again")).toBe(false);
   });
 
   test("create_nation's colour and flag reach updates and snapshots", async () => {
     run(
       {
         kind: "create_nation",
+        id: "lorraine",
         tile: game.ref(50, 50),
         name: "Lorraine",
         color: "#3366cc",
@@ -160,6 +166,7 @@ describe("Sandbox", () => {
     run({ kind: "paint", tiles: block(0, 0, 6), owner: "host" });
     const action: SandboxAction = {
       kind: "create_nation",
+      id: "saxony01",
       tile: game.ref(60, 60),
       name: "Saxony",
     };
@@ -249,7 +256,15 @@ describe("Sandbox", () => {
   });
 
   test("set_ai turns a nation's and a tribe's AI off and on", () => {
-    run({ kind: "create_nation", tile: game.ref(50, 50), name: "Bavaria" }, 3);
+    run(
+      {
+        kind: "create_nation",
+        id: "bavaria1",
+        tile: game.ref(50, 50),
+        name: "Bavaria",
+      },
+      3,
+    );
     const nation = game.players().find((p) => p.name() === "Bavaria")!;
     const tribeInfo = new PlayerInfo("Tribe", PlayerType.Bot, null, "tribe1");
     game.addExecution(new SpawnExecution(gameID, tribeInfo, game.ref(20, 80)));
@@ -283,9 +298,22 @@ describe("Sandbox", () => {
   test("the intent schema rejects oversize or malformed actions", () => {
     const bad = [
       { kind: "paint", tiles: new Array(20_001).fill(0), owner: null },
-      { kind: "create_nation", tile: 1, name: "<script>" },
-      { kind: "create_nation", tile: 1, name: "A", flag: "../../x" },
-      { kind: "create_nation", tile: 1, name: "A", color: "red" },
+      { kind: "create_nation", id: "abcd1234", tile: 1, name: "<script>" },
+      { kind: "create_nation", id: "abc", tile: 1, name: "A" },
+      {
+        kind: "create_nation",
+        id: "abcd1234",
+        tile: 1,
+        name: "A",
+        flag: "../../x",
+      },
+      {
+        kind: "create_nation",
+        id: "abcd1234",
+        tile: 1,
+        name: "A",
+        color: "red",
+      },
       { kind: "war", attacker: "a", target: "b", ratio: 2 },
       { kind: "teleport" },
       { kind: "as", player: "a", intent: { type: "kick_player" } },

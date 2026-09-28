@@ -211,7 +211,7 @@ export class LocalServer {
         this.intents.push(stampedIntent);
         this.pausedFlush ??= setTimeout(() => {
           this.pausedFlush = null;
-          this.forceTurns(2);
+          this.forceTurns(3);
         }, 250);
         return;
       }
@@ -272,8 +272,9 @@ export class LocalServer {
   }
 
   // Overreach sandbox: run turns while paused, for Step and for edits (a
-  // sandbox action takes two ticks: init, then apply).
-  // ponytail: each paused edit batch advances the game 2 ticks; add a no-tick
+  // sandbox action takes two ticks, init then apply, and a new nation one more
+  // to spawn).
+  // ponytail: each paused edit batch advances the game 3 ticks; add a no-tick
   // apply path in GameRunner if that ever matters.
   private forceTurns(n: number) {
     if (!this.paused) return;

@@ -5,11 +5,13 @@ import type { EventBus } from "../../core/EventBus";
 import { PlayerType, UnitType } from "../../core/game/Game";
 import type { TileRef } from "../../core/game/GameMap";
 import {
+  MAX_GOLD,
   MAX_PAINT_TILES,
   MAX_TROOPS,
   SANDBOX_STRUCTURES,
   type SandboxAction,
 } from "../../core/overreach/Sandbox";
+import { generateID } from "../../core/Util";
 import type { Controller } from "../Controller";
 import type { TransformHandler } from "../TransformHandler";
 import { renderNumber, renderTroops, translateText } from "../Utils";
@@ -40,6 +42,14 @@ const TOOLS: Tool[] = [
   "ally",
 ];
 type Structure = (typeof SANDBOX_STRUCTURES)[number];
+// What Undo sends back: a stroke's tiles by their previous owner, a new
+// nation to delete, or an old troop or gold value.
+type UndoEntry =
+  | { kind: "paint"; before: Map<string | null, TileRef[]> }
+  | { kind: "nation"; id: string }
+  | { kind: "troops"; player: string; troops: number }
+  | { kind: "gold"; player: string; gold: number };
+const MAX_UNDO = 100;
 const FLUSH_MS = 100;
 const NAME_CHARS = /[^\p{L}\p{N} .,'()&-]/gu;
 // Flags for new nations, by name; "xx" is the list's "None".
@@ -99,6 +109,9 @@ export class SandboxPanel extends LitElement implements Controller {
   private swallowUp = false;
   private last: { x: number; y: number } | null = null;
   private pending = new Set<TileRef>();
+  // Each tile's owner before the current stroke, for Undo.
+  private strokeBefore = new Map<TileRef, string | null>();
+  @state() private undoStack: UndoEntry[] = [];
   private flushTimer: ReturnType<typeof setTimeout> | null = null;
 
   createRenderRoot() {
@@ -163,6 +176,9 @@ export class SandboxPanel extends LitElement implements Controller {
     if (this.tool === null || e.button !== 0 || !this.onMap(e)) return;
     e.stopImmediatePropagation();
     e.preventDefault();
+    // preventDefault keeps focus where it was; a map click should take it
+    // from the panel's inputs, or Ctrl+Z would undo their text instead.
+    (document.activeElement as HTMLElement | null)?.blur();
     this.swallowUp = true;
     if (this.tool === "paint" || this.tool === "erase") {
       if (this.tool === "paint" && this.selectedID === null) return;
@@ -190,12 +206,63 @@ export class SandboxPanel extends LitElement implements Controller {
     if (this.stroke) {
       this.stroke = false;
       this.flush();
+      this.endStroke();
     }
   };
 
   private onKey = (e: KeyboardEvent) => {
     if (e.key === "Escape" && this.tool !== null) this.tool = null;
+    const typing = (e.target as HTMLElement | null)?.tagName === "INPUT";
+    if ((e.ctrlKey || e.metaKey) && e.key === "z" && !typing) {
+      e.preventDefault();
+      this.undo();
+    }
   };
+
+  private pushUndo(entry: UndoEntry) {
+    this.undoStack = [...this.undoStack, entry].slice(-MAX_UNDO);
+  }
+
+  private endStroke() {
+    if (this.strokeBefore.size === 0) return;
+    const before = new Map<string | null, TileRef[]>();
+    for (const [t, owner] of this.strokeBefore) {
+      const tiles = before.get(owner) ?? [];
+      tiles.push(t);
+      before.set(owner, tiles);
+    }
+    this.strokeBefore.clear();
+    this.pushUndo({ kind: "paint", before });
+  }
+
+  // Sends the inverse of the last edit. It reverts that edit, not time: the
+  // world keeps whatever else happened since.
+  private undo() {
+    const entry = this.undoStack[this.undoStack.length - 1];
+    if (entry === undefined) return;
+    this.undoStack = this.undoStack.slice(0, -1);
+    switch (entry.kind) {
+      case "paint":
+        for (const [owner, tiles] of entry.before) {
+          for (let i = 0; i < tiles.length; i += MAX_PAINT_TILES) {
+            const chunk = tiles.slice(i, i + MAX_PAINT_TILES);
+            this.send({ kind: "paint", tiles: chunk, owner });
+          }
+        }
+        return;
+      case "nation":
+        if (this.controlledID === entry.id) this.control(null);
+        if (this.selectedID === entry.id) this.selectedID = null;
+        this.send({ kind: "delete_nation", player: entry.id });
+        return;
+      case "troops":
+        this.send({ ...entry, kind: "set_troops" });
+        return;
+      case "gold":
+        this.send({ ...entry, kind: "set_gold" });
+        return;
+    }
+  }
 
   // Adds the brush disc along the path from the last point, so fast drags
   // leave no gaps, and sends the tiles every FLUSH_MS.
@@ -240,6 +307,13 @@ export class SandboxPanel extends LitElement implements Controller {
     const owner = this.tool === "erase" ? null : this.selectedID;
     const tiles = Array.from(this.pending);
     this.pending.clear();
+    for (const t of tiles) {
+      const o = this.game.owner(t);
+      const was = o.isPlayer() ? (o as PlayerView).id() : null;
+      if (was !== owner && !this.strokeBefore.has(t)) {
+        this.strokeBefore.set(t, was);
+      }
+    }
     for (let i = 0; i < tiles.length; i += MAX_PAINT_TILES) {
       this.send({
         kind: "paint",
@@ -262,14 +336,18 @@ export class SandboxPanel extends LitElement implements Controller {
           this.querySelector<HTMLInputElement>("#sandbox-name")?.focus();
           return;
         }
+        const id = generateID();
         this.send({
           kind: "create_nation",
+          id,
           tile,
           name,
           color: this.newColor,
           ...(this.newFlag ? { flag: this.newFlag } : {}),
         });
-        // Ready for the next one.
+        this.pushUndo({ kind: "nation", id });
+        // Selected, so Paint works on it at once; the form is ready for the next.
+        this.selectedID = id;
         this.newName = "";
         this.newColor = randomColor();
         this.newFlag = "";
@@ -342,13 +420,23 @@ export class SandboxPanel extends LitElement implements Controller {
       >
         <div class="flex items-center justify-between font-bold uppercase">
           <span>${translateText("sandbox.title")}</span>
-          <button
-            class=${btn(false)}
-            title=${translateText("sandbox.step_hint")}
-            @click=${() => this.eventBus.emit(new SandboxStepEvent())}
-          >
-            ${translateText("sandbox.step")}
-          </button>
+          <span class="flex gap-1">
+            <button
+              class="${btn(false)} disabled:opacity-40"
+              title=${translateText("sandbox.undo_hint")}
+              ?disabled=${this.undoStack.length === 0}
+              @click=${() => this.undo()}
+            >
+              ${translateText("sandbox.undo")}
+            </button>
+            <button
+              class=${btn(false)}
+              title=${translateText("sandbox.step_hint")}
+              @click=${() => this.eventBus.emit(new SandboxStepEvent())}
+            >
+              ${translateText("sandbox.step")}
+            </button>
+          </span>
         </div>
         <div class="flex items-center justify-between gap-2">
           <span class="truncate">
@@ -515,12 +603,17 @@ export class SandboxPanel extends LitElement implements Controller {
                   @click=${() => {
                     const troops = this.numberFrom("sandbox-troops");
                     // Typed as shown on screen; the engine counts tenths.
-                    if (troops !== null)
-                      this.send({
-                        kind: "set_troops",
-                        player: sel.id(),
-                        troops: Math.min(troops * 10, MAX_TROOPS),
-                      });
+                    if (troops === null) return;
+                    this.pushUndo({
+                      kind: "troops",
+                      player: sel.id(),
+                      troops: Math.min(sel.troops(), MAX_TROOPS),
+                    });
+                    this.send({
+                      kind: "set_troops",
+                      player: sel.id(),
+                      troops: Math.min(troops * 10, MAX_TROOPS),
+                    });
                   }}
                 >
                   ${translateText("sandbox.set")}
@@ -538,8 +631,13 @@ export class SandboxPanel extends LitElement implements Controller {
                   class=${btn(false)}
                   @click=${() => {
                     const gold = this.numberFrom("sandbox-gold");
-                    if (gold !== null)
-                      this.send({ kind: "set_gold", player: sel.id(), gold });
+                    if (gold === null) return;
+                    this.pushUndo({
+                      kind: "gold",
+                      player: sel.id(),
+                      gold: Math.min(Number(sel.gold()), MAX_GOLD),
+                    });
+                    this.send({ kind: "set_gold", player: sel.id(), gold });
                   }}
                 >
                   ${translateText("sandbox.set")}

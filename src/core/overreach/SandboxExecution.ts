@@ -21,7 +21,6 @@ import {
 } from "../game/Game";
 import type { GameImpl } from "../game/GameImpl";
 import { TileRef } from "../game/GameMap";
-import { PseudoRandom } from "../PseudoRandom";
 import { GameID, IntentSchema, StampedIntent } from "../Schemas";
 import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
 import type {
@@ -30,7 +29,7 @@ import type {
   SnapshotWriter,
 } from "../snapshot/SnapshotContext";
 import { zPlayerRef } from "../snapshot/SnapshotType";
-import { assertNever, simpleHash } from "../Util";
+import { assertNever } from "../Util";
 import {
   SANDBOX_AS_TYPES,
   SandboxAction,
@@ -94,7 +93,7 @@ export class SandboxExecution implements Execution {
       case "paint":
         return this.paint(a.tiles, a.owner);
       case "create_nation":
-        return this.createNation(a.tile, a.name, a.color, a.flag);
+        return this.createNation(a.id, a.tile, a.name, a.color, a.flag);
       case "delete_nation":
         return this.withPlayer(a.player, (p) => this.deleteNation(p));
       case "set_troops":
@@ -159,20 +158,14 @@ export class SandboxExecution implements Execution {
   }
 
   private createNation(
+    id: PlayerID,
     tile: TileRef,
     name: string,
     color?: string,
     flag?: string,
   ): void {
     if (!this.mg.isValidRef(tile) || !this.mg.isLand(tile)) return;
-    if (this.mg.isImpassable(tile)) return;
-    // Seeded from game, tick and tile so every client mints the same id,
-    // in the same format as the map's nations (NationCreation).
-    const random = new PseudoRandom(
-      simpleHash(this.gameID) + this.mg.ticks() + tile,
-    );
-    let id = random.nextID();
-    while (this.mg.hasPlayer(id)) id = random.nextID();
+    if (this.mg.isImpassable(tile) || this.mg.hasPlayer(id)) return;
     const info = new PlayerInfo(
       name,
       PlayerType.Nation,

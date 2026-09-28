@@ -71,7 +71,7 @@ describe("LocalServer in a paused sandbox", () => {
     vi.unstubAllGlobals();
   });
 
-  it("applies a paused edit as two turns, 250 ms later", () => {
+  it("applies a paused edit as three turns, 250 ms later", () => {
     const before = turns.length;
     send({
       type: "sandbox",
@@ -79,11 +79,11 @@ describe("LocalServer in a paused sandbox", () => {
     });
     expect(turns.length).toBe(before);
     vi.advanceTimersByTime(250);
-    expect(turns.length).toBe(before + 2);
+    expect(turns.length).toBe(before + 3);
     expect(turns[before].intents.map((i) => i.type)).toEqual(["sandbox"]);
     expect(turns[before + 1].intents).toEqual([]);
     vi.advanceTimersByTime(1000);
-    expect(turns.length).toBe(before + 2); // still paused
+    expect(turns.length).toBe(before + 3); // still paused
   });
 
   it("steps one turn while paused, and not while running", () => {

@@ -8,7 +8,7 @@ import { UnitType } from "../game/Game";
 // Most tiles one paint intent may carry. A brush stroke sends many intents.
 export const MAX_PAINT_TILES = 20_000;
 export const MAX_TROOPS = 1_000_000_000;
-const MAX_GOLD = 1_000_000_000_000;
+export const MAX_GOLD = 1_000_000_000_000;
 
 // Orders a player gives. In a sandbox the client sends these as `as` actions
 // for the nation it controls, and drops them while observing.
@@ -55,8 +55,11 @@ export const SandboxActionSchema = z.discriminatedUnion("kind", [
     tiles: TileSchema.array().max(MAX_PAINT_TILES),
     owner: PlayerIDSchema.nullable(),
   }),
+  // The client picks the id (so it can select and undo the nation); an id
+  // already in use is ignored.
   z.object({
     kind: z.literal("create_nation"),
+    id: z.string().regex(/^[A-Za-z0-9]{8,10}$/), // Schemas.GAME_ID_REGEX
     tile: TileSchema,
     name: z
       .string()

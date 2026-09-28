@@ -146,7 +146,7 @@ any `openfront.io` host.
   - undo restores the exact state.
 - **Done when:** you can paint two nations on World, make them fight, pause, step and undo, and the replay reproduces it.
 
-**Status (28 Sep 2026): second part done.**
+**Status (28 Sep 2026): done.**
 
 What's built:
 
@@ -159,33 +159,39 @@ What's built:
   - the Executor runs them as that player;
   - `GameView.setMyPlayer` points the HUD at it;
   - while observing, orders are dropped instead.
-- **One `sandbox` intent** (`src/core/overreach/Sandbox.ts`) with these actions: paint, create_nation, delete_nation,
-  set_troops, set_gold, war (attack or expand), peace, ally, build, set_ai and as. `SandboxExecution` applies them one tick
-  after they arrive, and only in sandbox games. In multiplayer, only the host of a private game may send them.
+- **One `sandbox` intent** (`src/core/overreach/Sandbox.ts`). Actions:
+  - paint, create_nation (the client picks the id), delete_nation;
+  - set_troops, set_gold;
+  - war (attack or expand), peace, ally;
+  - build, set_ai, as.
+
+  `SandboxExecution` applies them one tick after they arrive, and only in sandbox games. In multiplayer, only the host
+  of a private game may send them.
+
+- **A nation's colour** lives on `PlayerInfo.color`, next to `nationFlag`. Updates, snapshots and `GameView` carry it,
+  so scenario nations (F2) can use it too.
 - **The panel** (`src/client/overreach/SandboxPanel.ts`):
-  - tools: Select, Paint, Erase, New nation (name, colour, flag), Build (a finished structure for free, by the usual placement rules),
-    War, Peace, Ally;
+  - tools: Select, Paint, Erase, New nation (name, colour, flag), Build (a finished structure for free, by the usual
+    placement rules), War, Peace, Ally;
   - brush size and the share of troops sent;
   - the selected nation's stats, with Set troops / Set gold / Play as / AI on-off / Expand / Delete;
   - Observing / Playing as, and Observe;
-  - a hover readout of the tile and its owner;
-  - Step;
+  - Undo (and Ctrl+Z), Step, and a hover readout of the tile and its owner;
   - Esc puts the tool away.
 - **While a tool is active,** left clicks and drags go to the tool, and the right button still moves the camera.
-- **Paused edits and orders** apply 250 ms later as two single-tick turns.
+- **Paused edits and orders** apply 250 ms later as three single-tick turns (init, apply, and a spawn for a new
+  nation).
+- **Undo differs from the plan above.** It sends the inverse of your last edit (a stroke's tiles back to their old
+  owners, a new nation deleted, the old troops or gold). It reverts the edit, not time: what the AI did meanwhile
+  stays. Restoring snapshots would mean rebuilding the worker, the view and `LocalServer`'s turns mid-game, and the
+  inverse also works in multiplayer. Delete, build, war, peace and ally aren't undoable yet.
 
 Checked:
 
-- 23 tests in `tests/overreach/`, plus snapshot round trips.
-- A nation's colour lives on `PlayerInfo.color`, next to `nationFlag`: updates, snapshots and `GameView` carry it, so
-  scenario nations (F2) can use it too.
-- In the browser: the tab, the observer start, Play as Russia, a click that sends Russia's attack, Observe, and a
-  city built for Uruguay with 2,900 gold, and a magenta nation with the French flag.
-
-Still to do:
-
-- undo (snapshot restore plus replaying the intents);
-- a replay check of a recorded sandbox session;
+- 24 tests in `tests/overreach/`, including a recorded sandbox session (a new nation, paint, orders as it, a build,
+  war, peace, alliance) that replays to an identical snapshot.
+- In the browser: the tab, the observer start, Play as Russia, a click that sends Russia's attack, Observe, a city
+  built for Uruguay with 2,900 gold, a magenta nation with the French flag, and Undo of a stroke and of a new nation.
 
 ### F2: Scenario starts (pre-drawn territory)
 

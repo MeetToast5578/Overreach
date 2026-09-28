@@ -1885,6 +1885,8 @@
     "tool_war": "War",
     "troops": "Troops",
     "unclaimed": "Unclaimed",
+    "undo": "Undo",
+    "undo_hint": "Undo your last paint stroke, new nation, or troops or gold change (Ctrl+Z)",
     "water": "Water"
   },
   "select_lang": {
