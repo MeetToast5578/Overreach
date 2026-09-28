@@ -461,6 +461,8 @@ export class PlayerInfo {
     // the correct flag even when multiple nations on a map share a display
     // name (e.g. India's and Pakistan's "Punjab").
     public readonly nationFlag: string | null = null,
+    // Overreach: a fixed territory colour (#rrggbb), e.g. a sandbox nation's.
+    public readonly color: string | null = null,
   ) {
     this.displayName = formatPlayerDisplayName(this.name, this.clanTag);
   }

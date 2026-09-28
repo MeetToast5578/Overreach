@@ -382,6 +382,7 @@ export class PlayerImpl implements Player {
       displayName: this.displayName(),
       clanTag: this.clanTag(),
       nationFlag: this.nationFlag(),
+      color: this.playerInfo.color,
       id: this.id(),
       team: this.team() ?? undefined,
       smallID: this.smallID(),

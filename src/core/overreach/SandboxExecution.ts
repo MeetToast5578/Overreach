@@ -94,7 +94,7 @@ export class SandboxExecution implements Execution {
       case "paint":
         return this.paint(a.tiles, a.owner);
       case "create_nation":
-        return this.createNation(a.tile, a.name);
+        return this.createNation(a.tile, a.name, a.color, a.flag);
       case "delete_nation":
         return this.withPlayer(a.player, (p) => this.deleteNation(p));
       case "set_troops":
@@ -158,7 +158,12 @@ export class SandboxExecution implements Execution {
     }
   }
 
-  private createNation(tile: TileRef, name: string): void {
+  private createNation(
+    tile: TileRef,
+    name: string,
+    color?: string,
+    flag?: string,
+  ): void {
     if (!this.mg.isValidRef(tile) || !this.mg.isLand(tile)) return;
     if (this.mg.isImpassable(tile)) return;
     // Seeded from game, tick and tile so every client mints the same id,
@@ -168,7 +173,18 @@ export class SandboxExecution implements Execution {
     );
     let id = random.nextID();
     while (this.mg.hasPlayer(id)) id = random.nextID();
-    const info = new PlayerInfo(name, PlayerType.Nation, null, id);
+    const info = new PlayerInfo(
+      name,
+      PlayerType.Nation,
+      null,
+      id,
+      false,
+      null,
+      [],
+      null,
+      flag ?? null,
+      color ?? null,
+    );
     // The spawn cell keeps the nation near the click if this runs during the
     // spawn phase, when NationExecution re-places nations.
     const cell = new Cell(this.mg.x(tile), this.mg.y(tile));

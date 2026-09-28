@@ -234,6 +234,7 @@ export interface PlayerUpdate {
   displayName?: string;
   clanTag?: string | null;
   nationFlag?: string | null;
+  color?: string | null; // Overreach: PlayerInfo.color
   team?: Team;
   smallID?: number;
   playerType?: PlayerType;

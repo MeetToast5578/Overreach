@@ -163,7 +163,7 @@ What's built:
   set_troops, set_gold, war (attack or expand), peace, ally, build, set_ai and as. `SandboxExecution` applies them one tick
   after they arrive, and only in sandbox games. In multiplayer, only the host of a private game may send them.
 - **The panel** (`src/client/overreach/SandboxPanel.ts`):
-  - tools: Select, Paint, Erase, New nation, Build (a finished structure for free, by the usual placement rules),
+  - tools: Select, Paint, Erase, New nation (name, colour, flag), Build (a finished structure for free, by the usual placement rules),
     War, Peace, Ally;
   - brush size and the share of troops sent;
   - the selected nation's stats, with Set troops / Set gold / Play as / AI on-off / Expand / Delete;
@@ -176,15 +176,16 @@ What's built:
 
 Checked:
 
-- 22 tests in `tests/overreach/`, plus a snapshot round trip.
+- 23 tests in `tests/overreach/`, plus snapshot round trips.
+- A nation's colour lives on `PlayerInfo.color`, next to `nationFlag`: updates, snapshots and `GameView` carry it, so
+  scenario nations (F2) can use it too.
 - In the browser: the tab, the observer start, Play as Russia, a click that sends Russia's attack, Observe, and a
-  city built for Uruguay with 2,900 gold.
+  city built for Uruguay with 2,900 gold, and a magenta nation with the French flag.
 
 Still to do:
 
 - undo (snapshot restore plus replaying the intents);
 - a replay check of a recorded sandbox session;
-- nation colour and flag on creation.
 
 ### F2: Scenario starts (pre-drawn territory)
 

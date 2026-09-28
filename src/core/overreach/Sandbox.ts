@@ -63,6 +63,16 @@ export const SandboxActionSchema = z.discriminatedUnion("kind", [
       .min(1)
       .max(40)
       .regex(/^[\p{L}\p{N} .,'()&-]+$/u),
+    color: z
+      .string()
+      .regex(/^#[0-9a-f]{6}$/i)
+      .optional(),
+    // A resources/flags file name (without .svg). No "/" or ".", so it can't
+    // leave that folder when it becomes a URL.
+    flag: z
+      .string()
+      .regex(/^[\p{L}\p{N} '()_-]{1,40}$/u)
+      .optional(),
   }),
   z.object({ kind: z.literal("delete_nation"), player: PlayerIDSchema }),
   z.object({

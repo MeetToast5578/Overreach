@@ -1,5 +1,6 @@
 import { html, LitElement, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import Countries from "resources/countries.json" with { type: "json" };
 import type { EventBus } from "../../core/EventBus";
 import { PlayerType, UnitType } from "../../core/game/Game";
 import type { TileRef } from "../../core/game/GameMap";
@@ -41,6 +42,14 @@ const TOOLS: Tool[] = [
 type Structure = (typeof SANDBOX_STRUCTURES)[number];
 const FLUSH_MS = 100;
 const NAME_CHARS = /[^\p{L}\p{N} .,'()&-]/gu;
+// Flags for new nations, by name; "xx" is the list's "None".
+const FLAGS = Countries.filter((c) => c.code !== "xx").sort((a, b) =>
+  a.name.localeCompare(b.name),
+);
+const randomColor = () =>
+  `#${Math.floor(Math.random() * 0x1000000)
+    .toString(16)
+    .padStart(6, "0")}`;
 
 /** Creates the sandbox panel when the game is a sandbox game, else null. */
 export function createSandboxPanel(
@@ -75,6 +84,10 @@ export class SandboxPanel extends LitElement implements Controller {
   @state() private brush = 4;
   @state() private share = 50;
   @state() private structure: Structure = UnitType.City;
+  // The New nation form.
+  @state() private newName = "";
+  @state() private newColor = randomColor();
+  @state() private newFlag = "";
   @state() private selectedID: string | null = null;
   @state() private hover: TileRef | null = null;
   // The player we play as (null observes), and the players whose AI is off.
@@ -244,9 +257,22 @@ export class SandboxPanel extends LitElement implements Controller {
         this.selectedID = target?.id() ?? null;
         return;
       case "nation": {
-        const typed = window.prompt(translateText("sandbox.name_prompt"));
-        const name = (typed ?? "").replace(NAME_CHARS, "").trim().slice(0, 40);
-        if (name.length > 0) this.send({ kind: "create_nation", tile, name });
+        const name = this.newName.replace(NAME_CHARS, "").trim().slice(0, 40);
+        if (name.length === 0) {
+          this.querySelector<HTMLInputElement>("#sandbox-name")?.focus();
+          return;
+        }
+        this.send({
+          kind: "create_nation",
+          tile,
+          name,
+          color: this.newColor,
+          ...(this.newFlag ? { flag: this.newFlag } : {}),
+        });
+        // Ready for the next one.
+        this.newName = "";
+        this.newColor = randomColor();
+        this.newFlag = "";
         return;
       }
       case "build":
@@ -366,6 +392,55 @@ export class SandboxPanel extends LitElement implements Controller {
               ${this.brush}
             </label>`
           : nothing}
+        ${this.tool === "nation"
+          ? html`<div class="space-y-1">
+              <div class="flex gap-1">
+                <input
+                  id="sandbox-name"
+                  class="min-w-0 flex-1 rounded bg-white/10 px-1"
+                  maxlength="40"
+                  placeholder=${translateText("sandbox.name_prompt")}
+                  .value=${this.newName}
+                  @input=${(e: Event) =>
+                    (this.newName = (e.target as HTMLInputElement).value)}
+                />
+                <input
+                  type="color"
+                  class="h-5 w-8 rounded bg-transparent"
+                  title=${translateText("sandbox.color")}
+                  .value=${this.newColor}
+                  @input=${(e: Event) =>
+                    (this.newColor = (e.target as HTMLInputElement).value)}
+                />
+              </div>
+              <select
+                class="w-full rounded bg-white/10 px-1"
+                @change=${(e: Event) =>
+                  (this.newFlag = (e.target as HTMLSelectElement).value)}
+              >
+                <option
+                  class="bg-slate-900"
+                  value=""
+                  ?selected=${!this.newFlag}
+                >
+                  ${translateText("sandbox.no_flag")}
+                </option>
+                ${FLAGS.map(
+                  (c) =>
+                    html`<option
+                      class="bg-slate-900"
+                      value=${c.code}
+                      ?selected=${c.code === this.newFlag}
+                    >
+                      ${c.name}
+                    </option>`,
+                )}
+              </select>
+              <div class="text-white/60">
+                ${translateText("sandbox.nation_hint")}
+              </div>
+            </div>`
+          : nothing}
         ${this.tool === "build"
           ? html`<select
               class="w-full rounded bg-white/10 px-1"
@@ -402,9 +477,10 @@ export class SandboxPanel extends LitElement implements Controller {
               ${this.share}%
             </label>`
           : nothing}
-        ${this.tool !== null &&
-        this.tool !== "select" &&
-        this.tool !== "build" &&
+        ${(this.tool === "paint" ||
+          this.tool === "war" ||
+          this.tool === "peace" ||
+          this.tool === "ally") &&
         sel === null
           ? html`<div class="text-yellow-300">
               ${translateText("sandbox.none_selected")}

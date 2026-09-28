@@ -393,9 +393,13 @@ export class GameView implements GameMap {
           // being looked up by name — some maps define multiple nations with
           // the same display name (e.g. India's and Pakistan's "Punjab").
           this._cosmetics.get(pu.clientID ?? "") ??
-            (pu.playerType === PlayerType.Nation && pu.nationFlag
+            (pu.playerType === PlayerType.Nation && (pu.nationFlag || pu.color)
               ? ({
-                  flag: `/flags/${pu.nationFlag}.svg`,
+                  ...(pu.nationFlag
+                    ? { flag: `/flags/${pu.nationFlag}.svg` }
+                    : {}),
+                  // Overreach: PlayerInfo.color, e.g. a sandbox nation's.
+                  ...(pu.color ? { color: { color: pu.color } } : {}),
                 } satisfies PlayerCosmetics)
               : undefined) ??
             {},

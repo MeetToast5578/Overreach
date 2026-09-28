@@ -12,13 +12,14 @@ import {
   UnitType,
 } from "../../src/core/game/Game";
 import { GameImpl } from "../../src/core/game/GameImpl";
+import { PlayerImpl } from "../../src/core/game/PlayerImpl";
 import { GameRunner } from "../../src/core/GameRunner";
 import { SandboxAction } from "../../src/core/overreach/Sandbox";
 import { SandboxExecution } from "../../src/core/overreach/SandboxExecution";
 import { IntentSchema } from "../../src/core/Schemas";
 import { authorizeIntent } from "../../src/server/IntentAuthorization";
 import { setup } from "../util/Setup";
-import { expectSnapshotRoundTrip } from "../util/Snapshot";
+import { expectSnapshotRoundTrip, roundTrip } from "../util/Snapshot";
 
 const gameID = "game_id";
 let game: Game;
@@ -93,6 +94,26 @@ describe("Sandbox", () => {
     expect(nation).toBeDefined();
     expect(nation!.type()).toBe(PlayerType.Nation);
     expect(nation!.numTilesOwned()).toBeGreaterThan(0);
+  });
+
+  test("create_nation's colour and flag reach updates and snapshots", async () => {
+    run(
+      {
+        kind: "create_nation",
+        tile: game.ref(50, 50),
+        name: "Lorraine",
+        color: "#3366cc",
+        flag: "fr",
+      },
+      3,
+    );
+    const nation = game.players().find((p) => p.name() === "Lorraine")!;
+    expect(nation.info().color).toBe("#3366cc");
+    expect(nation.info().nationFlag).toBe("fr");
+    const update = (nation as PlayerImpl)["toFullUpdate"]();
+    expect(update).toMatchObject({ color: "#3366cc", nationFlag: "fr" });
+    const { restored } = await roundTrip(game, "plains");
+    expect(restored.player(nation.id()).info().color).toBe("#3366cc");
   });
 
   test("delete_nation removes all its land", () => {
@@ -263,6 +284,8 @@ describe("Sandbox", () => {
     const bad = [
       { kind: "paint", tiles: new Array(20_001).fill(0), owner: null },
       { kind: "create_nation", tile: 1, name: "<script>" },
+      { kind: "create_nation", tile: 1, name: "A", flag: "../../x" },
+      { kind: "create_nation", tile: 1, name: "A", color: "red" },
       { kind: "war", attacker: "a", target: "b", ratio: 2 },
       { kind: "teleport" },
       { kind: "as", player: "a", intent: { type: "kick_player" } },
