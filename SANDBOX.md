@@ -146,33 +146,42 @@ any `openfront.io` host.
   - undo restores the exact state.
 - **Done when:** you can paint two nations on World, make them fight, pause, step and undo, and the replay reproduces it.
 
-**Status (28 Sep 2026): first part done.**
+**Status (28 Sep 2026): second part done.**
 
 What's built:
 
-- **The Sandbox toggle** in the single-player window. Sandbox games get the multiplayer spawn timer, so the world starts
-  after 10 s even if you never spawn.
+- **A Sandbox tab** in the single-player window (`#modal=single-player&tab=sandbox`), next to Standard.
+- **Observer start.** You keep a seat but never spawn. The spawn phase ends on the multiplayer timer (10 s), and
+  nobody can win a sandbox (no `WinCheckExecution`).
+- **Play as any nation or tribe.** Select it, then Play as. Its AI stops while you control it and comes back when you
+  press Observe, or when it dies. While you control a nation:
+  - the client sends your orders as `as` actions naming it (`routeSandboxIntent`, one hook in `Transport`);
+  - the Executor runs them as that player;
+  - `GameView.setMyPlayer` points the HUD at it;
+  - while observing, orders are dropped instead.
 - **One `sandbox` intent** (`src/core/overreach/Sandbox.ts`) with these actions: paint, create_nation, delete_nation,
-  set_troops, set_gold, war (attack or expand), peace and ally. `SandboxExecution` applies them one tick after they
-  arrive, and only in sandbox games. In multiplayer, only the host of a private game may send them.
+  set_troops, set_gold, war (attack or expand), peace, ally, build, set_ai and as. `SandboxExecution` applies them one tick
+  after they arrive, and only in sandbox games. In multiplayer, only the host of a private game may send them.
 - **The panel** (`src/client/overreach/SandboxPanel.ts`):
-  - tools: Select, Paint, Erase, New nation, War, Peace, Ally;
+  - tools: Select, Paint, Erase, New nation, Build (a finished structure for free, by the usual placement rules),
+    War, Peace, Ally;
   - brush size and the share of troops sent;
-  - the selected nation's stats, with Set troops / Set gold / Expand / Delete;
+  - the selected nation's stats, with Set troops / Set gold / Play as / AI on-off / Expand / Delete;
+  - Observing / Playing as, and Observe;
   - a hover readout of the tile and its owner;
   - Step;
   - Esc puts the tool away.
 - **While a tool is active,** left clicks and drags go to the tool, and the right button still moves the camera.
-- **Paused edits** apply 250 ms later as two single-tick turns.
+- **Paused edits and orders** apply 250 ms later as two single-tick turns.
 
-Checked: 15 tests in `tests/overreach/`; a snapshot round trip; and in the browser, New nation, Select, a paint stroke
-(+429 tiles) and Set troops.
+Checked:
 
-Still to do (F1b):
+- 22 tests in `tests/overreach/`, plus a snapshot round trip.
+- In the browser: the tab, the observer start, Play as Russia, a click that sends Russia's attack, Observe, and a
+  city built for Uruguay with 2,900 gold.
 
-- toggle the AI;
-- place structures for free;
-- play as any nation;
+Still to do:
+
 - undo (snapshot restore plus replaying the intents);
 - a replay check of a recorded sandbox session;
 - nation colour and flag on creation.

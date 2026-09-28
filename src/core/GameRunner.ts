@@ -186,7 +186,10 @@ export class GameRunner {
         ...this.execManager.spawnTribes(this.game.config().bots()),
       );
     }
-    this.game.addExecution(new WinCheckExecution());
+    // Overreach: nobody wins a sandbox.
+    if (this.game.config().gameConfig().sandbox !== true) {
+      this.game.addExecution(new WinCheckExecution());
+    }
     if (this.game.config().doomsdayClockConfig().enabled) {
       this.game.addExecution(new DoomsdayClockExecution());
     }

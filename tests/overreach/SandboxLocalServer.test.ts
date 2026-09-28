@@ -17,7 +17,11 @@ vi.mock("src/client/ClientEnv", () => ({
 }));
 
 import { LocalServer } from "../../src/client/LocalServer";
-import { SandboxStepEvent } from "../../src/client/overreach/SandboxEvents";
+import {
+  routeSandboxIntent,
+  SandboxStepEvent,
+  setSandboxControl,
+} from "../../src/client/overreach/SandboxEvents";
 
 const CLIENT_ID = "abCD1234";
 
@@ -91,5 +95,27 @@ describe("LocalServer in a paused sandbox", () => {
     const running = turns.length;
     bus.emit(new SandboxStepEvent());
     expect(turns.length).toBe(running);
+  });
+});
+
+describe("routeSandboxIntent", () => {
+  const attack = { type: "attack", targetID: null, troops: 5 } as const;
+  const pause = { type: "toggle_pause", paused: true } as const;
+  afterEach(() => setSandboxControl(false, null));
+
+  it("passes everything through outside a sandbox", () => {
+    expect(routeSandboxIntent(attack)).toBe(attack);
+  });
+
+  it("drops orders while observing and sends them as the controlled player", () => {
+    setSandboxControl(true, null);
+    expect(routeSandboxIntent(attack)).toBeNull();
+    expect(routeSandboxIntent(pause)).toBe(pause);
+    setSandboxControl(true, "nation01");
+    expect(routeSandboxIntent(attack)).toEqual({
+      type: "sandbox",
+      action: { kind: "as", player: "nation01", intent: attack },
+    });
+    expect(routeSandboxIntent(pause)).toBe(pause);
   });
 });

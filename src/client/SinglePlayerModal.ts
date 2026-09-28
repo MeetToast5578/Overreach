@@ -19,7 +19,7 @@ import { generateID } from "../core/Util";
 import { responseHasLinkedIdentity } from "./AccountIdentity";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
-import { BaseModal } from "./components/BaseModal";
+import { BaseModal, type ModalConfig } from "./components/BaseModal";
 import "./components/GameConfigSettings";
 import { MEDAL_ORDER, medalIcon } from "./components/map/Medals";
 import "./components/ToggleInputCard";
@@ -103,7 +103,6 @@ const DEFAULT_OPTIONS = {
   maxTimer: false,
   maxTimerValue: undefined as number | undefined,
   instantBuild: false,
-  sandbox: false,
   randomSpawn: false,
   useRandomMap: false,
   gameMode: GameMode.FFA,
@@ -168,6 +167,16 @@ async function loadAchievementEligibleMaps(): Promise<Set<GameMapType> | null> {
 export class SinglePlayerModal extends BaseModal {
   protected routerName = "single-player";
 
+  // Overreach: Sandbox is its own tab (#modal=single-player&tab=sandbox).
+  protected modalConfig(): ModalConfig {
+    return {
+      tabs: [
+        { key: "standard", label: translateText("sandbox.tab_standard") },
+        { key: "sandbox", label: translateText("sandbox.tab_sandbox") },
+      ],
+    };
+  }
+
   @state() private selectedMap: GameMapType = DEFAULT_OPTIONS.selectedMap;
   @state() private selectedDifficulty: Difficulty =
     DEFAULT_OPTIONS.selectedDifficulty;
@@ -181,7 +190,6 @@ export class SinglePlayerModal extends BaseModal {
   @state() private maxTimerValue: number | undefined =
     DEFAULT_OPTIONS.maxTimerValue;
   @state() private instantBuild: boolean = DEFAULT_OPTIONS.instantBuild;
-  @state() private sandbox: boolean = DEFAULT_OPTIONS.sandbox;
   @state() private randomSpawn: boolean = DEFAULT_OPTIONS.randomSpawn;
   @state() private useRandomMap: boolean = DEFAULT_OPTIONS.useRandomMap;
   @state() private gameMode: GameMode = DEFAULT_OPTIONS.gameMode;
@@ -485,6 +493,11 @@ export class SinglePlayerModal extends BaseModal {
         <div
           class="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-6 pt-4 pb-6 mr-1 mx-auto w-full max-w-5xl"
         >
+          ${this.activeTab === "sandbox"
+            ? html`<p class="mb-4 text-sm text-white/70">
+                ${translateText("sandbox.intro")}
+              </p>`
+            : null}
           <game-config-settings
             class="block"
             .sectionGapClass=${"space-y-6"}
@@ -519,10 +532,6 @@ export class SinglePlayerModal extends BaseModal {
                   disabledKey: "common.disabled",
                 },
                 toggles: [
-                  {
-                    labelKey: "game_settings.sandbox",
-                    checked: this.sandbox,
-                  },
                   {
                     labelKey: "game_settings.instant_build",
                     checked: this.instantBuild,
@@ -609,7 +618,6 @@ export class SinglePlayerModal extends BaseModal {
       this.compactMap !== DEFAULT_OPTIONS.compactMap ||
       this.maxTimer !== DEFAULT_OPTIONS.maxTimer ||
       this.instantBuild !== DEFAULT_OPTIONS.instantBuild ||
-      this.sandbox !== DEFAULT_OPTIONS.sandbox ||
       this.randomSpawn !== DEFAULT_OPTIONS.randomSpawn ||
       this.gameMode !== DEFAULT_OPTIONS.gameMode ||
       this.goldMultiplier !== DEFAULT_OPTIONS.goldMultiplier ||
@@ -683,7 +691,6 @@ export class SinglePlayerModal extends BaseModal {
     this.maxTimer = DEFAULT_OPTIONS.maxTimer;
     this.maxTimerValue = DEFAULT_OPTIONS.maxTimerValue;
     this.instantBuild = DEFAULT_OPTIONS.instantBuild;
-    this.sandbox = DEFAULT_OPTIONS.sandbox;
     this.randomSpawn = DEFAULT_OPTIONS.randomSpawn;
     this.teamCount = DEFAULT_OPTIONS.teamCount;
     this.disabledUnits = [...DEFAULT_OPTIONS.disabledUnits];
@@ -776,9 +783,6 @@ export class SinglePlayerModal extends BaseModal {
     switch (labelKey) {
       case "game_settings.instant_build":
         this.instantBuild = checked;
-        break;
-      case "game_settings.sandbox":
-        this.sandbox = checked;
         break;
       case "game_settings.random_spawn":
         this.randomSpawn = checked;
@@ -1157,7 +1161,7 @@ export class SinglePlayerModal extends BaseModal {
                 donateTroops: this.gameMode === GameMode.Team,
                 infiniteTroops: this.infiniteTroops,
                 instantBuild: this.instantBuild,
-                sandbox: this.sandbox,
+                ...(this.activeTab === "sandbox" ? { sandbox: true } : {}),
                 randomSpawn: this.randomSpawn,
                 disabledUnits: this.disabledUnits.filter(
                   (unit): unit is UnitType =>
@@ -1201,6 +1205,8 @@ export class SinglePlayerModal extends BaseModal {
               lobbyCreatedAt: Date.now(), // ms; server should be authoritative in MP
             },
             source: "singleplayer",
+            // A sandbox starts as an observer; the player never spawns.
+            spectator: this.activeTab === "sandbox",
           } satisfies JoinLobbyEvent,
           bubbles: true,
           composed: true,

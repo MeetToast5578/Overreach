@@ -895,7 +895,6 @@
     "options": "Options",
     "overtime": "Overtime after (minutes)",
     "random_spawn": "Random spawn",
-    "sandbox": "Sandbox (god mode)",
     "start": "Start Game",
     "starting": "Starting…",
     "starting_gold": "Starting Gold (Millions)",
@@ -1852,19 +1851,29 @@
     "title": "Rewards"
   },
   "sandbox": {
+    "ai_off": "AI: off",
+    "ai_on": "AI: on",
     "attack_share": "Troops sent",
     "brush": "Brush",
     "delete": "Delete",
     "expand": "Expand",
     "gold": "Gold",
+    "intro": "You start as an observer. Edit the world with the tools, or pick a nation with Select and play as it.",
     "name_prompt": "Name of the new nation",
     "none_selected": "Pick a nation with Select first",
+    "observe": "Observe",
+    "observing": "Observing",
+    "play_as": "Play as",
+    "playing_as": "Playing as {name}",
     "set": "Set",
     "step": "Step",
     "step_hint": "Pause the game, then step one turn at a time",
+    "tab_sandbox": "Sandbox",
+    "tab_standard": "Standard",
     "tiles": "Tiles",
     "title": "Sandbox",
     "tool_ally": "Ally",
+    "tool_build": "Build",
     "tool_erase": "Erase",
     "tool_nation": "New nation",
     "tool_paint": "Paint",
@@ -2199,8 +2208,8 @@
     "warship": "Warship"
   },
   "update_available": {
-    "desktop": "A new version of OpenFront is available. It will download in the background; reload from the update bar once it is ready.",
-    "message": "A new version of OpenFront is available. The page will now refresh to update."
+    "desktop": "A new version of Overreach is available. It will download in the background; reload from the update bar once it is ready.",
+    "message": "A new version of Overreach is available. The page will now refresh to update."
   },
   "user_setting": {
     "alert_frame_desc": "Toggle the alert frame. When enabled, the frame will be displayed when you are betrayed or attacked over land.",

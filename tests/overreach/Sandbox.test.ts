@@ -1,5 +1,17 @@
+import { AttackExecution } from "../../src/core/execution/AttackExecution";
 import { Executor } from "../../src/core/execution/ExecutionManager";
-import { Game, Player, PlayerInfo, PlayerType } from "../../src/core/game/Game";
+import { NationExecution } from "../../src/core/execution/NationExecution";
+import { NoOpExecution } from "../../src/core/execution/NoOpExecution";
+import { SpawnExecution } from "../../src/core/execution/SpawnExecution";
+import { TribeExecution } from "../../src/core/execution/TribeExecution";
+import {
+  Game,
+  Player,
+  PlayerInfo,
+  PlayerType,
+  UnitType,
+} from "../../src/core/game/Game";
+import { GameImpl } from "../../src/core/game/GameImpl";
 import { GameRunner } from "../../src/core/GameRunner";
 import { SandboxAction } from "../../src/core/overreach/Sandbox";
 import { SandboxExecution } from "../../src/core/overreach/SandboxExecution";
@@ -150,12 +162,110 @@ describe("Sandbox", () => {
     expect(exec).toBeInstanceOf(SandboxExecution);
   });
 
+  test("as runs a player's order for another player", () => {
+    // Intents carry real player ids (8-10 letters and digits).
+    const red = playerOf("redNation");
+    run({ kind: "paint", tiles: block(0, 0, 10), owner: "host" });
+    run({ kind: "paint", tiles: block(10, 0, 10), owner: red.id() });
+    run({ kind: "set_troops", player: "host", troops: 50_000 });
+    game.addPlayer(new PlayerInfo("me", PlayerType.Human, "CLIENT01", "me"));
+    const exec = new Executor(game, gameID, "CLIENT01").createExec({
+      type: "sandbox",
+      action: {
+        kind: "as",
+        player: "host",
+        intent: { type: "attack", targetID: red.id(), troops: 10_000 },
+      },
+      clientID: "CLIENT01",
+    });
+    expect(exec).toBeInstanceOf(AttackExecution);
+    game.addExecution(exec);
+    game.executeNextTick();
+    game.executeNextTick();
+    expect(host.outgoingAttacks().some((a) => a.target() === red)).toBe(true);
+  });
+
+  test("as refuses non-order intents, unknown players and non-sandbox games", async () => {
+    game.addPlayer(new PlayerInfo("me", PlayerType.Human, "CLIENT01", "me"));
+    const as = (player: string, intent: object) =>
+      new Executor(game, gameID, "CLIENT01").createExec({
+        type: "sandbox",
+        action: { kind: "as", player, intent },
+        clientID: "CLIENT01",
+      } as never);
+    const attack = { type: "attack", targetID: null, troops: 1 };
+    expect(as("host", { type: "toggle_pause", paused: true })).toBeInstanceOf(
+      NoOpExecution,
+    );
+    expect(as("host", { type: "attack", troops: "lots" })).toBeInstanceOf(
+      NoOpExecution,
+    );
+    expect(as("nobody", attack)).toBeInstanceOf(NoOpExecution);
+    expect(as("host", attack)).toBeInstanceOf(AttackExecution);
+
+    game = await setup("plains", {});
+    host = playerOf("host");
+    game.addPlayer(new PlayerInfo("me", PlayerType.Human, "CLIENT01", "me"));
+    expect(as("host", attack)).toBeInstanceOf(NoOpExecution);
+  });
+
+  test("build places a finished structure for free, by the usual rules", () => {
+    run({ kind: "paint", tiles: block(20, 20, 20), owner: "host" });
+    const cost = (u: UnitType) => game.unitInfo(u).cost(game, host);
+    expect(host.gold()).toBeLessThan(cost(UnitType.City)); // can't afford one
+    run({ kind: "build", unit: UnitType.City, tile: game.ref(30, 30) });
+    const cities = host.units(UnitType.City);
+    expect(cities).toHaveLength(1);
+    expect(cities[0].isUnderConstruction()).toBe(false);
+
+    // An inland port isn't built, and its cost isn't left behind.
+    run({ kind: "build", unit: UnitType.Port, tile: game.ref(25, 25) });
+    expect(host.units(UnitType.Port)).toHaveLength(0);
+    expect(host.gold()).toBeLessThan(cost(UnitType.Port));
+    // Nor is anything built on unclaimed land.
+    run({ kind: "build", unit: UnitType.City, tile: game.ref(80, 80) });
+    expect(game.units(UnitType.City)).toHaveLength(1);
+  });
+
+  test("set_ai turns a nation's and a tribe's AI off and on", () => {
+    run({ kind: "create_nation", tile: game.ref(50, 50), name: "Bavaria" }, 3);
+    const nation = game.players().find((p) => p.name() === "Bavaria")!;
+    const tribeInfo = new PlayerInfo("Tribe", PlayerType.Bot, null, "tribe1");
+    game.addExecution(new SpawnExecution(gameID, tribeInfo, game.ref(20, 80)));
+    game.executeNextTick();
+    game.executeNextTick();
+    const tribe = game.player("tribe1");
+
+    const aiOf = (p: Player) =>
+      (game as GameImpl)
+        .executions()
+        .filter(
+          (e) =>
+            (e instanceof NationExecution &&
+              e["nation"].playerInfo.id === p.id()) ||
+            (e instanceof TribeExecution && e["tribe"] === p),
+        ).length;
+    expect(aiOf(nation)).toBe(1);
+    expect(aiOf(tribe)).toBe(1);
+
+    for (const p of [nation, tribe]) {
+      run({ kind: "set_ai", player: p.id(), on: false });
+      expect(aiOf(p)).toBe(0);
+      run({ kind: "set_ai", player: p.id(), on: true });
+      run({ kind: "set_ai", player: p.id(), on: true });
+      expect(aiOf(p)).toBe(1);
+    }
+    run({ kind: "set_ai", player: "host", on: true });
+    expect(aiOf(host)).toBe(0);
+  });
+
   test("the intent schema rejects oversize or malformed actions", () => {
     const bad = [
       { kind: "paint", tiles: new Array(20_001).fill(0), owner: null },
       { kind: "create_nation", tile: 1, name: "<script>" },
       { kind: "war", attacker: "a", target: "b", ratio: 2 },
       { kind: "teleport" },
+      { kind: "as", player: "a", intent: { type: "kick_player" } },
     ];
     for (const action of bad) {
       expect(IntentSchema.safeParse({ type: "sandbox", action }).success).toBe(

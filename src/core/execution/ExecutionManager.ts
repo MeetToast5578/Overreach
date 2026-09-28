@@ -1,4 +1,4 @@
-import { Execution, Game } from "../game/Game";
+import { Execution, Game, Player } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID, GameID, StampedIntent, Turn } from "../Schemas";
 import { simpleHash } from "../Util";
@@ -29,7 +29,7 @@ import { TribeSpawner } from "./TribeSpawner";
 import { UpgradeStructureExecution } from "./UpgradeStructureExecution";
 import { PlayerSpawner } from "./utils/PlayerSpawner";
 
-import { SandboxExecution } from "../overreach/SandboxExecution";
+import { sandboxExec } from "../overreach/SandboxExecution";
 
 export class Executor {
   // private random = new PseudoRandom(999)
@@ -54,8 +54,9 @@ export class Executor {
     return turn.intents.map((i) => this.createExec(i));
   }
 
-  createExec(intent: StampedIntent): Execution {
-    const player = this.mg.playerByClientID(intent.clientID);
+  // Overreach: `as` runs the intent for that player (sandbox "as" actions).
+  createExec(intent: StampedIntent, as?: Player): Execution {
+    const player = as ?? this.mg.playerByClientID(intent.clientID);
     if (!player) {
       console.warn(`player with clientID ${intent.clientID} not found`);
       return new NoOpExecution();
@@ -142,7 +143,7 @@ export class Executor {
       case "toggle_pause":
         return new PauseExecution(player, intent.paused);
       case "sandbox":
-        return new SandboxExecution(this.gameID_, player, intent.action);
+        return sandboxExec(this, this.mg, this.gameID_, player, intent);
       default:
         throw new Error(`intent type ${intent} not found`);
     }

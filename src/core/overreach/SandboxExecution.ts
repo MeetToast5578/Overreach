@@ -1,9 +1,13 @@
 import { z } from "zod";
 import { AttackExecution } from "../execution/AttackExecution";
+import { ConstructionExecution } from "../execution/ConstructionExecution";
+import type { Executor } from "../execution/ExecutionManager";
 import { NationExecution } from "../execution/NationExecution";
+import { NoOpExecution } from "../execution/NoOpExecution";
 import { PlayerExecution } from "../execution/PlayerExecution";
 import { RetreatExecution } from "../execution/RetreatExecution";
 import { SpawnExecution } from "../execution/SpawnExecution";
+import { TribeExecution } from "../execution/TribeExecution";
 import {
   Cell,
   Execution,
@@ -13,10 +17,12 @@ import {
   PlayerID,
   PlayerInfo,
   PlayerType,
+  UnitType,
 } from "../game/Game";
+import type { GameImpl } from "../game/GameImpl";
 import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
-import type { GameID } from "../Schemas";
+import { GameID, IntentSchema, StampedIntent } from "../Schemas";
 import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
 import type {
   ExecRecord,
@@ -25,7 +31,40 @@ import type {
 } from "../snapshot/SnapshotContext";
 import { zPlayerRef } from "../snapshot/SnapshotType";
 import { assertNever, simpleHash } from "../Util";
-import { SandboxAction, SandboxActionSchema } from "./Sandbox";
+import {
+  SANDBOX_AS_TYPES,
+  SandboxAction,
+  SandboxActionSchema,
+  SandboxIntent,
+} from "./Sandbox";
+
+// The Executor's "sandbox" case. An `as` action becomes its intent's
+// execution for the named player, built now at intake; any other action
+// becomes a SandboxExecution.
+export function sandboxExec(
+  executor: Executor,
+  mg: Game,
+  gameID: GameID,
+  sender: Player,
+  intent: SandboxIntent & StampedIntent,
+): Execution {
+  const a = intent.action;
+  if (a.kind !== "as") return new SandboxExecution(gameID, sender, a);
+  if (mg.config().gameConfig().sandbox !== true || !mg.hasPlayer(a.player)) {
+    return new NoOpExecution();
+  }
+  const inner = IntentSchema.safeParse(a.intent);
+  if (
+    !inner.success ||
+    !(SANDBOX_AS_TYPES as readonly string[]).includes(inner.data.type)
+  ) {
+    return new NoOpExecution();
+  }
+  return executor.createExec(
+    { ...inner.data, clientID: intent.clientID },
+    mg.player(a.player),
+  );
+}
 
 // Applies one sandbox action. Work happens in tick(), not init(): executions
 // added from init() are dropped by GameImpl.executeNextTick, and create_nation,
@@ -68,6 +107,12 @@ export class SandboxExecution implements Execution {
         return this.withPair(a.a, a.b, (x, y) => this.peace(x, y));
       case "ally":
         return this.withPair(a.a, a.b, (x, y) => this.ally(x, y));
+      case "build":
+        return this.build(a.unit, a.tile);
+      case "set_ai":
+        return this.withPlayer(a.player, (p) => this.setAi(p, a.on));
+      case "as": // resolved at intake by sandboxExec
+        return;
       default:
         assertNever(a);
     }
@@ -185,6 +230,50 @@ export class SandboxExecution implements Execution {
       .incomingAllianceRequests()
       .find((r) => r.requestor() === x);
     (pending ?? x.createAllianceRequest(y))?.accept();
+  }
+
+  // Pays the cost for the owner, then runs the ordinary construction to
+  // completion now, so the structure is free and instant but placed by the
+  // usual rules. Refunds when it can't go there.
+  private build(type: UnitType, tile: TileRef): void {
+    if (!this.mg.isValidRef(tile)) return;
+    const owner = this.mg.owner(tile);
+    if (!owner.isPlayer()) return;
+    const gold = owner.gold();
+    owner.addGold(this.mg.unitInfo(type).cost(this.mg, owner));
+    const construction = new ConstructionExecution(owner, type, tile);
+    construction.init(this.mg, this.mg.ticks());
+    while (construction.isActive()) construction.tick(this.mg.ticks());
+    if (owner.gold() > gold) owner.removeGold(owner.gold() - gold);
+  }
+
+  // Off removes the player's AI execution; on adds a fresh one. Humans have none.
+  private setAi(p: Player, on: boolean): void {
+    // executions() and removeExecution() are on GameImpl, not the Game interface.
+    const g = this.mg as GameImpl;
+    const ai = g
+      .executions()
+      .filter(
+        (e) =>
+          (e instanceof NationExecution &&
+            e["nation"].playerInfo.id === p.id()) ||
+          (e instanceof TribeExecution && e["tribe"] === p),
+      );
+    if (!on) {
+      ai.forEach((e) => g.removeExecution(e));
+      return;
+    }
+    if (ai.length > 0) return;
+    if (p.type() === PlayerType.Nation) {
+      const t = p.spawnTile();
+      const cell =
+        t === undefined ? undefined : new Cell(this.mg.x(t), this.mg.y(t));
+      this.mg.addExecution(
+        new NationExecution(this.gameID, new Nation(cell, p.info())),
+      );
+    } else if (p.type() === PlayerType.Bot) {
+      this.mg.addExecution(new TribeExecution(p));
+    }
   }
 
   isActive(): boolean {

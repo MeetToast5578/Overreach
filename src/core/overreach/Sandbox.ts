@@ -1,13 +1,49 @@
 import { z } from "zod";
 import { zb } from "../../../zbin";
+import { UnitType } from "../game/Game";
 
 // Sandbox mode (Overreach): god-mode edits, sent as a single "sandbox" intent.
 // Only honoured when the game config has `sandbox: true` (see SandboxExecution).
 
 // Most tiles one paint intent may carry. A brush stroke sends many intents.
 export const MAX_PAINT_TILES = 20_000;
-const MAX_TROOPS = 1_000_000_000;
+export const MAX_TROOPS = 1_000_000_000;
 const MAX_GOLD = 1_000_000_000_000;
+
+// Orders a player gives. In a sandbox the client sends these as `as` actions
+// for the nation it controls, and drops them while observing.
+export const SANDBOX_AS_TYPES = [
+  "attack",
+  "cancel_attack",
+  "spawn",
+  "boat",
+  "cancel_boat",
+  "allianceRequest",
+  "allianceReject",
+  "breakAlliance",
+  "allianceExtension",
+  "targetPlayer",
+  "emoji",
+  "quick_chat",
+  "donate_gold",
+  "donate_troops",
+  "build_unit",
+  "upgrade_structure",
+  "delete_unit",
+  "embargo",
+  "embargo_all",
+  "move_warship",
+] as const;
+
+// What the sandbox's Build tool places.
+export const SANDBOX_STRUCTURES = [
+  UnitType.City,
+  UnitType.Port,
+  UnitType.Factory,
+  UnitType.DefensePost,
+  UnitType.SAMLauncher,
+  UnitType.MissileSilo,
+] as const;
 
 const PlayerIDSchema = z.string().min(1).max(64);
 const TileSchema = z.number().int().nonnegative();
@@ -49,6 +85,26 @@ export const SandboxActionSchema = z.discriminatedUnion("kind", [
   }),
   z.object({ kind: z.literal("peace"), a: PlayerIDSchema, b: PlayerIDSchema }),
   z.object({ kind: z.literal("ally"), a: PlayerIDSchema, b: PlayerIDSchema }),
+  // A structure for the tile's owner, free and finished at once. The usual
+  // placement rules (own land, spacing, coast for ports) still apply.
+  z.object({
+    kind: z.literal("build"),
+    tile: TileSchema,
+    unit: z.enum(SANDBOX_STRUCTURES),
+  }),
+  // Turns a nation's or tribe's AI off or back on.
+  z.object({
+    kind: z.literal("set_ai"),
+    player: PlayerIDSchema,
+    on: z.boolean(),
+  }),
+  // Runs `intent` as `player`. The intent is checked against IntentSchema
+  // when it arrives (sandboxExec), not here, to keep Schemas.ts out of this file.
+  z.object({
+    kind: z.literal("as"),
+    player: PlayerIDSchema,
+    intent: z.looseObject({ type: z.enum(SANDBOX_AS_TYPES) }),
+  }),
 ]);
 export type SandboxAction = z.infer<typeof SandboxActionSchema>;
 

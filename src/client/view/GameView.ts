@@ -1033,6 +1033,11 @@ export class GameView implements GameMap {
     return this._myPlayer;
   }
 
+  // Overreach: the sandbox plays as any player; null goes back to our own.
+  setMyPlayer(player: PlayerView | null): void {
+    this._myPlayer = player;
+  }
+
   player(id: PlayerID): PlayerView {
     const player = this._players.get(id);
     if (player === undefined) {

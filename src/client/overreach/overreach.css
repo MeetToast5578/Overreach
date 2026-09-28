@@ -45,3 +45,14 @@ steam-wishlist-button {
 single-player-modal button.bg-yellow-500\/20 {
   display: none !important;
 }
+
+/* ponytail: the win modal's middle box only promotes OpenFront (their Steam page, Discord, store, tutorial).
+   It has no id; it's the modal's one scrolling box. Breaks if upstream restyles it. */
+win-modal .min-h-0.flex-1.overflow-y-auto {
+  display: none !important;
+}
+
+/* The first-game tutorial teaches spawning, which a sandbox observer never does. */
+body.overreach-sandbox tutorial-panel {
+  display: none !important;
+}

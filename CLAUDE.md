@@ -99,7 +99,7 @@ holds the 1836 world data. `legacy/` is the pre-fork engine, read-only.
 - Never call OpenFront's API or CDN. Builds without `DOMAIN` point the API at localhost.
 - On this machine: npm 11.19, so install with `npm ci --ignore-scripts --engine-strict=false` until npm 12.1.0 is
   installed. `tests/UpdateRegister.test.ts` fails without `jq` (a deploy-script test, not ours), and
-  `MainInitialize`/`InventoryModal` can time out under full-suite load but pass alone.
+  `MainInitialize`, `InventoryModal` and `UpdateFlagLatest` can time out under full-suite load but pass alone.
 - `tests/server/RenderHtml.test.ts` fails whenever a build exists in `static/` (upstream behaviour); delete `static/`
   before running the full suite.
 - Browser checks on Windows: `.claude/skills/run-openfront/` targets Ubuntu. Copy `driver.mjs` and `game.mjs` to a

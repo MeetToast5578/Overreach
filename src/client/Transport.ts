@@ -47,7 +47,10 @@ import { clientPlatform } from "./ClientPlatform";
 import { isDesktopShell } from "./DesktopShell";
 import { showInGameConfirm } from "./InGameModal";
 import { LocalServer } from "./LocalServer";
-import { SendSandboxIntentEvent } from "./overreach/SandboxEvents";
+import {
+  routeSandboxIntent,
+  SendSandboxIntentEvent,
+} from "./overreach/SandboxEvents";
 import { describeSocketClose } from "./SocketClose";
 import { homeHref, translateText } from "./Utils";
 import { PlayerView } from "./view";
@@ -999,9 +1002,12 @@ export class Transport {
   }
 
   private sendIntent(intent: Intent) {
+    // Overreach: a sandbox sends orders as the nation the player controls.
+    const routed = routeSandboxIntent(intent);
+    if (routed === null) return;
     const msg = {
       type: "intent",
-      intent: intent,
+      intent: routed,
     } satisfies ClientIntentMessage;
     this.sendMsg(msg);
   }

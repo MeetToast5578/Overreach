@@ -1,27 +1,44 @@
 import { html, LitElement, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import type { EventBus } from "../../core/EventBus";
+import { PlayerType, UnitType } from "../../core/game/Game";
 import type { TileRef } from "../../core/game/GameMap";
 import {
   MAX_PAINT_TILES,
+  MAX_TROOPS,
+  SANDBOX_STRUCTURES,
   type SandboxAction,
 } from "../../core/overreach/Sandbox";
 import type { Controller } from "../Controller";
 import type { TransformHandler } from "../TransformHandler";
-import { translateText } from "../Utils";
+import { renderNumber, renderTroops, translateText } from "../Utils";
 import type { GameView, PlayerView } from "../view";
-import { SandboxStepEvent, SendSandboxIntentEvent } from "./SandboxEvents";
+import {
+  SandboxStepEvent,
+  SendSandboxIntentEvent,
+  setSandboxControl,
+} from "./SandboxEvents";
 
-type Tool = "select" | "paint" | "erase" | "nation" | "war" | "peace" | "ally";
+type Tool =
+  | "select"
+  | "paint"
+  | "erase"
+  | "nation"
+  | "build"
+  | "war"
+  | "peace"
+  | "ally";
 const TOOLS: Tool[] = [
   "select",
   "paint",
   "erase",
   "nation",
+  "build",
   "war",
   "peace",
   "ally",
 ];
+type Structure = (typeof SANDBOX_STRUCTURES)[number];
 const FLUSH_MS = 100;
 const NAME_CHARS = /[^\p{L}\p{N} .,'()&-]/gu;
 
@@ -31,7 +48,10 @@ export function createSandboxPanel(
   eventBus: EventBus,
   transform: TransformHandler,
 ): SandboxPanel | null {
-  if (game.config().gameConfig().sandbox !== true) return null;
+  const sandbox = game.config().gameConfig().sandbox === true;
+  setSandboxControl(sandbox, null);
+  document.body.classList.toggle("overreach-sandbox", sandbox); // see overreach.css
+  if (!sandbox) return null;
   const panel = document.createElement("sandbox-panel") as SandboxPanel;
   panel.game = game;
   panel.eventBus = eventBus;
@@ -54,8 +74,13 @@ export class SandboxPanel extends LitElement implements Controller {
   @state() private tool: Tool | null = null;
   @state() private brush = 4;
   @state() private share = 50;
+  @state() private structure: Structure = UnitType.City;
   @state() private selectedID: string | null = null;
   @state() private hover: TileRef | null = null;
+  // The player we play as (null observes), and the players whose AI is off.
+  @state() private controlledID: string | null = null;
+  @state() private aiOff = new Set<string>();
+  private resumeAi = false;
 
   private stroke = false;
   private swallowUp = false;
@@ -79,7 +104,29 @@ export class SandboxPanel extends LitElement implements Controller {
   }
 
   tick() {
+    const c = this.controlledID;
+    if (c !== null && !this.game.player(c).isAlive()) this.control(null);
     this.requestUpdate();
+  }
+
+  // Plays as `p`, or observes when null. The player's AI is off while we
+  // control it, and comes back on release if it was on before.
+  private control(p: PlayerView | null) {
+    const prev = this.controlledID;
+    if (prev !== null && this.resumeAi) this.setAi(prev, true);
+    this.resumeAi = p !== null && !this.aiOff.has(p.id());
+    if (p !== null) this.setAi(p.id(), false);
+    this.controlledID = p?.id() ?? null;
+    setSandboxControl(true, this.controlledID);
+    this.game.setMyPlayer(p);
+  }
+
+  private setAi(player: string, on: boolean) {
+    this.send({ kind: "set_ai", player, on });
+    const off = new Set(this.aiOff);
+    if (on) off.delete(player);
+    else off.add(player);
+    this.aiOff = off;
   }
 
   private send(action: SandboxAction) {
@@ -202,6 +249,9 @@ export class SandboxPanel extends LitElement implements Controller {
         if (name.length > 0) this.send({ kind: "create_nation", tile, name });
         return;
       }
+      case "build":
+        this.send({ kind: "build", tile, unit: this.structure });
+        return;
       case "war":
       case "peace":
       case "ally": {
@@ -256,6 +306,8 @@ export class SandboxPanel extends LitElement implements Controller {
   render() {
     if (this.game === undefined) return nothing;
     const sel = this.selected();
+    const controlled =
+      this.controlledID === null ? null : this.game.player(this.controlledID);
     const btn = (on: boolean) =>
       `px-2 py-1 rounded ${on ? "bg-blue-600" : "bg-white/10 hover:bg-white/20"}`;
     return html`
@@ -271,6 +323,23 @@ export class SandboxPanel extends LitElement implements Controller {
           >
             ${translateText("sandbox.step")}
           </button>
+        </div>
+        <div class="flex items-center justify-between gap-2">
+          <span class="truncate">
+            ${controlled === null
+              ? translateText("sandbox.observing")
+              : translateText("sandbox.playing_as", {
+                  name: controlled.displayName(),
+                })}
+          </span>
+          ${controlled === null
+            ? nothing
+            : html`<button
+                class=${btn(false)}
+                @click=${() => this.control(null)}
+              >
+                ${translateText("sandbox.observe")}
+              </button>`}
         </div>
         <div class="flex flex-wrap gap-1">
           ${TOOLS.map(
@@ -297,6 +366,27 @@ export class SandboxPanel extends LitElement implements Controller {
               ${this.brush}
             </label>`
           : nothing}
+        ${this.tool === "build"
+          ? html`<select
+              class="w-full rounded bg-white/10 px-1"
+              @change=${(e: Event) =>
+                (this.structure = (e.target as HTMLSelectElement)
+                  .value as Structure)}
+            >
+              ${SANDBOX_STRUCTURES.map(
+                (u) =>
+                  html`<option
+                    class="bg-slate-900"
+                    value=${u}
+                    ?selected=${u === this.structure}
+                  >
+                    ${translateText(
+                      `unit_type.${u.toLowerCase().replace(/ /g, "_")}`,
+                    )}
+                  </option>`,
+              )}
+            </select>`
+          : nothing}
         ${this.tool === "war"
           ? html`<label class="flex items-center gap-2">
               ${translateText("sandbox.attack_share")}
@@ -312,7 +402,10 @@ export class SandboxPanel extends LitElement implements Controller {
               ${this.share}%
             </label>`
           : nothing}
-        ${this.tool !== null && this.tool !== "select" && sel === null
+        ${this.tool !== null &&
+        this.tool !== "select" &&
+        this.tool !== "build" &&
+        sel === null
           ? html`<div class="text-yellow-300">
               ${translateText("sandbox.none_selected")}
             </div>`
@@ -330,8 +423,8 @@ export class SandboxPanel extends LitElement implements Controller {
               <div>
                 ${translateText("sandbox.tiles")}: ${sel.numTilesOwned()} ·
                 ${translateText("sandbox.troops")}:
-                ${Math.floor(sel.troops()).toLocaleString()} ·
-                ${translateText("sandbox.gold")}: ${sel.gold().toLocaleString()}
+                ${renderTroops(sel.troops())} ·
+                ${translateText("sandbox.gold")}: ${renderNumber(sel.gold())}
               </div>
               <div class="flex gap-1">
                 <input
@@ -345,11 +438,12 @@ export class SandboxPanel extends LitElement implements Controller {
                   class=${btn(false)}
                   @click=${() => {
                     const troops = this.numberFrom("sandbox-troops");
+                    // Typed as shown on screen; the engine counts tenths.
                     if (troops !== null)
                       this.send({
                         kind: "set_troops",
                         player: sel.id(),
-                        troops,
+                        troops: Math.min(troops * 10, MAX_TROOPS),
                       });
                   }}
                 >
@@ -375,6 +469,29 @@ export class SandboxPanel extends LitElement implements Controller {
                   ${translateText("sandbox.set")}
                 </button>
               </div>
+              ${sel.type() === PlayerType.Human
+                ? nothing
+                : html`<div class="flex gap-1">
+                    ${sel.id() === this.controlledID
+                      ? nothing
+                      : html`<button
+                          class=${btn(false)}
+                          @click=${() => this.control(sel)}
+                        >
+                          ${translateText("sandbox.play_as")}
+                        </button>`}
+                    <button
+                      class=${btn(!this.aiOff.has(sel.id()))}
+                      @click=${() =>
+                        this.setAi(sel.id(), this.aiOff.has(sel.id()))}
+                    >
+                      ${translateText(
+                        this.aiOff.has(sel.id())
+                          ? "sandbox.ai_off"
+                          : "sandbox.ai_on",
+                      )}
+                    </button>
+                  </div>`}
               <div class="flex gap-1">
                 <button
                   class=${btn(false)}
