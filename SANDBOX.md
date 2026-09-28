@@ -146,6 +146,37 @@ any `openfront.io` host.
   - undo restores the exact state.
 - **Done when:** you can paint two nations on World, make them fight, pause, step and undo, and the replay reproduces it.
 
+**Status (28 Sep 2026): first part done.**
+
+What's built:
+
+- **The Sandbox toggle** in the single-player window. Sandbox games get the multiplayer spawn timer, so the world starts
+  after 10 s even if you never spawn.
+- **One `sandbox` intent** (`src/core/overreach/Sandbox.ts`) with these actions: paint, create_nation, delete_nation,
+  set_troops, set_gold, war (attack or expand), peace and ally. `SandboxExecution` applies them one tick after they
+  arrive, and only in sandbox games. In multiplayer, only the host of a private game may send them.
+- **The panel** (`src/client/overreach/SandboxPanel.ts`):
+  - tools: Select, Paint, Erase, New nation, War, Peace, Ally;
+  - brush size and the share of troops sent;
+  - the selected nation's stats, with Set troops / Set gold / Expand / Delete;
+  - a hover readout of the tile and its owner;
+  - Step;
+  - Esc puts the tool away.
+- **While a tool is active,** left clicks and drags go to the tool, and the right button still moves the camera.
+- **Paused edits** apply 250 ms later as two single-tick turns.
+
+Checked: 15 tests in `tests/overreach/`; a snapshot round trip; and in the browser, New nation, Select, a paint stroke
+(+429 tiles) and Set troops.
+
+Still to do (F1b):
+
+- toggle the AI;
+- place structures for free;
+- play as any nation;
+- undo (snapshot restore plus replaying the intents);
+- a replay check of a recorded sandbox session;
+- nation colour and flag on creation.
+
 ### F2: Scenario starts (pre-drawn territory)
 
 - A map folder can carry `owners.png` plus `scenario.json`: nations (tag, name, colour, flag, owner colour), alliances

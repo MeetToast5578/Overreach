@@ -13,6 +13,7 @@ import { ViewModeController } from "../controllers/ViewModeController";
 import { WarshipSelectionController } from "../controllers/WarshipSelectionController";
 import { GameStartingModal } from "../GameStartingModal";
 import { migrateLegacyGraphicsSettings } from "../GraphicsPresets";
+import { createSandboxPanel } from "../overreach/SandboxPanel";
 import { MapRenderer } from "../render/gl";
 import { TransformHandler } from "../TransformHandler";
 import { UIState } from "../UIState";
@@ -313,6 +314,8 @@ export function createRenderer(
   tutorialPanel.userSettings = userSettings;
   tutorialPanel.uiState = uiState;
 
+  const sandboxPanel = createSandboxPanel(game, eventBus, transformHandler);
+
   const layers: Controller[] = [
     new WarshipSelectionController(game, eventBus, transformHandler, view),
     new BuildPreviewController(
@@ -363,6 +366,7 @@ export function createRenderer(
     tutorialPanel,
     alertFrame,
     performanceOverlay,
+    ...(sandboxPanel ? [sandboxPanel] : []),
   ];
 
   return new GameRenderer(

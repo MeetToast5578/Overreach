@@ -1,5 +1,6 @@
 import { Executor } from "../../src/core/execution/ExecutionManager";
 import { Game, Player, PlayerInfo, PlayerType } from "../../src/core/game/Game";
+import { GameRunner } from "../../src/core/GameRunner";
 import { SandboxAction } from "../../src/core/overreach/Sandbox";
 import { SandboxExecution } from "../../src/core/overreach/SandboxExecution";
 import { IntentSchema } from "../../src/core/Schemas";
@@ -187,5 +188,36 @@ describe("Sandbox", () => {
     expect(
       authorizeIntent(intent, hostActor, { ...lobby, isPublic: true }),
     ).toMatchObject({ status: 403 });
+  });
+});
+
+describe("Sandbox spawn phase", () => {
+  // Single-player normally waits in the spawn phase until the human spawns;
+  // a sandbox ends it on the usual timer so the world runs without them.
+  async function spawnPhaseAfterTimer(sandbox: boolean): Promise<boolean> {
+    const g = await setup(
+      "plains",
+      { sandbox },
+      [],
+      undefined,
+      undefined,
+      false,
+    );
+    const runner = new GameRunner(
+      g,
+      new Executor(g, gameID, "CLIENT01"),
+      () => {},
+    );
+    runner.init();
+    for (let turn = 0; turn <= g.config().numSpawnPhaseTurns() + 1; turn++) {
+      runner.addTurn({ turnNumber: turn, intents: [] });
+      runner.executeNextTick();
+    }
+    return g.inSpawnPhase();
+  }
+
+  test("ends without the player spawning in a sandbox only", async () => {
+    expect(await spawnPhaseAfterTimer(false)).toBe(true);
+    expect(await spawnPhaseAfterTimer(true)).toBe(false);
   });
 });

@@ -47,6 +47,7 @@ import { clientPlatform } from "./ClientPlatform";
 import { isDesktopShell } from "./DesktopShell";
 import { showInGameConfirm } from "./InGameModal";
 import { LocalServer } from "./LocalServer";
+import { SendSandboxIntentEvent } from "./overreach/SandboxEvents";
 import { describeSocketClose } from "./SocketClose";
 import { homeHref, translateText } from "./Utils";
 import { PlayerView } from "./view";
@@ -326,6 +327,9 @@ export class Transport {
     this.subscribe(BuildUnitIntentEvent, (e) => this.onBuildUnitIntent(e));
 
     this.subscribe(PauseGameIntentEvent, (e) => this.onPauseGameIntent(e));
+    this.subscribe(SendSandboxIntentEvent, (e) =>
+      this.sendIntent({ type: "sandbox", action: e.action }),
+    );
     this.subscribe(SendWinnerEvent, (e) => this.onSendWinnerEvent(e));
     this.subscribe(SendLiveStatsEvent, (e) => this.onSendLiveStatsEvent(e));
     this.subscribe(SendPlayerReportEvent, (e) =>

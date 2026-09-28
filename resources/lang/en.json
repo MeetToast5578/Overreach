@@ -895,6 +895,7 @@
     "options": "Options",
     "overtime": "Overtime after (minutes)",
     "random_spawn": "Random spawn",
+    "sandbox": "Sandbox (god mode)",
     "start": "Start Game",
     "starting": "Starting…",
     "starting_gold": "Starting Gold (Millions)",
@@ -1849,6 +1850,30 @@
   },
   "rewards_modal": {
     "title": "Rewards"
+  },
+  "sandbox": {
+    "attack_share": "Troops sent",
+    "brush": "Brush",
+    "delete": "Delete",
+    "expand": "Expand",
+    "gold": "Gold",
+    "name_prompt": "Name of the new nation",
+    "none_selected": "Pick a nation with Select first",
+    "set": "Set",
+    "step": "Step",
+    "step_hint": "Pause the game, then step one turn at a time",
+    "tiles": "Tiles",
+    "title": "Sandbox",
+    "tool_ally": "Ally",
+    "tool_erase": "Erase",
+    "tool_nation": "New nation",
+    "tool_paint": "Paint",
+    "tool_peace": "Peace",
+    "tool_select": "Select",
+    "tool_war": "War",
+    "troops": "Troops",
+    "unclaimed": "Unclaimed",
+    "water": "Water"
   },
   "select_lang": {
     "title": "Select Language"

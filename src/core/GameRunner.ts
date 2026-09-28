@@ -168,7 +168,11 @@ export class GameRunner {
   }
 
   init() {
-    if (this.game.config().gameConfig().gameType !== GameType.Singleplayer) {
+    // Overreach: a sandbox needn't wait for the player to spawn.
+    if (
+      this.game.config().gameConfig().gameType !== GameType.Singleplayer ||
+      this.game.config().gameConfig().sandbox === true
+    ) {
       this.game.addExecution(new SpawnTimerExecution());
     }
     if (this.game.config().spawnNations()) {

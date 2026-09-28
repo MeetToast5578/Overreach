@@ -27,6 +27,7 @@ import {
   GameSpeedUpIntentEvent,
   ReplaySpeedChangeEvent,
 } from "./InputHandler";
+import { SandboxStepEvent } from "./overreach/SandboxEvents";
 import { startSingleplayerHeartbeat } from "./SingleplayerHeartbeat";
 import {
   defaultReplaySpeedMultiplier,
@@ -69,6 +70,7 @@ export class LocalServer {
 
   private turnCheckInterval: NodeJS.Timeout;
   private stopHeartbeat: (() => void) | null = null;
+  private pausedFlush: ReturnType<typeof setTimeout> | null = null;
   private clientConnect: () => void;
   private clientMessage: (message: ServerMessage) => void;
 
@@ -131,6 +133,10 @@ export class LocalServer {
           new ReplaySpeedChangeEvent(this.replaySpeedMultiplier),
         );
       });
+    }
+
+    if (!this.isReplay) {
+      this.eventBus.on(SandboxStepEvent, () => this.forceTurns(1));
     }
 
     this.startedAt = Date.now();
@@ -196,6 +202,19 @@ export class LocalServer {
         }
         return;
       }
+      // Overreach sandbox: edits made while paused still apply (see forceTurns).
+      if (
+        this.paused &&
+        stampedIntent.type === "sandbox" &&
+        !this.lobbyConfig.gameRecord
+      ) {
+        this.intents.push(stampedIntent);
+        this.pausedFlush ??= setTimeout(() => {
+          this.pausedFlush = null;
+          this.forceTurns(2);
+        }, 250);
+        return;
+      }
       // Don't process non-pause intents during replays or while paused
       if (this.lobbyConfig.gameRecord || this.paused) {
         return;
@@ -250,6 +269,17 @@ export class LocalServer {
         this.archiveGameRecord(false);
       }
     }
+  }
+
+  // Overreach sandbox: run turns while paused, for Step and for edits (a
+  // sandbox action takes two ticks: init, then apply).
+  // ponytail: each paused edit batch advances the game 2 ticks; add a no-tick
+  // apply path in GameRunner if that ever matters.
+  private forceTurns(n: number) {
+    if (!this.paused) return;
+    this.paused = false;
+    for (let i = 0; i < n; i++) this.endTurn();
+    this.paused = true;
   }
 
   // This is so the client can tell us when it finished processing the turn.

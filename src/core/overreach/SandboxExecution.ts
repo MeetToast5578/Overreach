@@ -5,6 +5,7 @@ import { PlayerExecution } from "../execution/PlayerExecution";
 import { RetreatExecution } from "../execution/RetreatExecution";
 import { SpawnExecution } from "../execution/SpawnExecution";
 import {
+  Cell,
   Execution,
   Game,
   Nation,
@@ -123,9 +124,12 @@ export class SandboxExecution implements Execution {
     let id = random.nextID();
     while (this.mg.hasPlayer(id)) id = random.nextID();
     const info = new PlayerInfo(name, PlayerType.Nation, null, id);
+    // The spawn cell keeps the nation near the click if this runs during the
+    // spawn phase, when NationExecution re-places nations.
+    const cell = new Cell(this.mg.x(tile), this.mg.y(tile));
     this.mg.addExecution(
       new SpawnExecution(this.gameID, info, tile),
-      new NationExecution(this.gameID, new Nation(undefined, info)),
+      new NationExecution(this.gameID, new Nation(cell, info)),
     );
   }
 
