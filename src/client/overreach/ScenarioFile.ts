@@ -10,6 +10,7 @@ import {
 import {
   encodeOwners,
   type Scenario,
+  type ScenarioProvinces,
   ScenarioSchema,
 } from "../../core/overreach/Scenario";
 import type { PlayerCosmetics } from "../../core/Schemas";
@@ -17,6 +18,7 @@ import { generateID } from "../../core/Util";
 import { sanitizePersona } from "../PlayerName";
 import { getMapName, translateText } from "../Utils";
 import type { GameView } from "../view";
+import { type ProvinceLayer, provinceLayer } from "./ProvinceLayer";
 
 // Characters a nation name may not hold (Sandbox.NationNameSchema allows the rest).
 export const NAME_CHARS = /[^\p{L}\p{N} .,'’()&-]/gu;
@@ -44,6 +46,7 @@ export function scenarioFromGame(game: GameView): Scenario {
     for (let j = i + 1; j < players.length; j++)
       if (players[i].isAlliedWith(players[j])) alliances.push([i, j]);
   const config = game.config().gameConfig();
+  const provinces = provincesOf(provinceLayer);
   return {
     version: 1,
     map: config.gameMap,
@@ -54,7 +57,33 @@ export function scenarioFromGame(game: GameView): Scenario {
       game.width() * game.height(),
       (t) => index.get(game.ownerID(t)) ?? 0,
     ),
+    ...(provinces ? { provinces } : {}),
   };
+}
+
+// The provinces as they are now (each tile in the one it counts in),
+// renumbered from 1.
+function provincesOf(
+  layer: ProvinceLayer | null,
+): ScenarioProvinces | undefined {
+  if (layer === null) return undefined;
+  const ids = new Map<number, number>();
+  const names: string[] = [];
+  const capitals: (number | null)[] = [];
+  const home = encodeOwners(layer.prov.length, (t) => {
+    const p = layer.prov[t];
+    const rec = layer.records[p];
+    if (p === 0 || !rec) return 0;
+    let id = ids.get(p);
+    if (id === undefined) {
+      id = names.push(rec.name.slice(0, 80));
+      ids.set(p, id);
+      const c = rec.capital;
+      capitals.push(c !== null && layer.prov[c] === p ? c : null);
+    }
+    return id;
+  });
+  return names.length > 0 ? { names, capitals, home } : undefined;
 }
 
 export function downloadScenario(scenario: Scenario): void {
@@ -85,7 +114,7 @@ export function scenarioPlayer(s: Scenario): {
   // Usernames are Latin-1: "Māori" becomes "Maori", "Đại Nam" "Dai Nam".
   const latin1 = n.name
     .replace(/Đ/g, "D")
-    .replace(/[^\u0000-\u00ff]/g, (c) =>
+    .replace(/[^\u0020-\u00ff]/g, (c) =>
       c.normalize("NFD").replace(/\p{M}/gu, ""),
     );
   const username = sanitizePersona(latin1);

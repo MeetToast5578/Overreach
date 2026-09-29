@@ -29,6 +29,7 @@ import { ErrorUpdate, GameUpdateViewData } from "./game/GameUpdates";
 import { createNationsForGame } from "./game/NationCreation";
 import { loadTerrainMap as loadGameMap } from "./game/TerrainMapLoader";
 import { ProvinceExecution } from "./overreach/ProvinceExecution";
+import { ProvinceViewTracker } from "./overreach/ProvinceView";
 import { ScenarioExecution } from "./overreach/ScenarioExecution";
 import { PseudoRandom } from "./PseudoRandom";
 import { ClientID, GameStartInfo, Turn } from "./Schemas";
@@ -148,6 +149,7 @@ export class GameRunner {
   // Name placements are recomputed periodically; a runner that starts
   // mid-game (restored from a snapshot) computes them on its first tick.
   private viewDataStale = true;
+  private provinceView = new ProvinceViewTracker(); // Overreach
 
   constructor(
     public game: Game,
@@ -281,6 +283,7 @@ export class GameRunner {
     }
 
     const packedTileUpdates = this.game.drainPackedTileUpdates();
+    const provinces = this.provinceView.next(this.game); // Overreach
     const packedMotionPlans = this.game.drainPackedMotionPlans();
     const packedPlayerUpdates = this.game.drainPackedPlayerUpdates();
     const packedAttackUpdates = this.game.drainPackedAttackUpdates();
@@ -295,6 +298,7 @@ export class GameRunner {
       ...(packedPlayerUpdates ? { packedPlayerUpdates } : {}),
       ...(packedAttackUpdates ? { packedAttackUpdates } : {}),
       ...(packedNukeImpacts ? { packedNukeImpacts } : {}),
+      ...(provinces ? { provinces } : {}),
       updates: updates,
       ...(viewDataChanged ? { playerNameViewData: this.playerViewData } : {}),
       tickExecutionDuration: tickExecutionDuration,

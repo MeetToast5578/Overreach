@@ -169,6 +169,7 @@ export const DERIVED_FIELDS = new Set<string>([
   // Overreach Provinces: rebuilt from the layers; for the client
   "provinceIndex",
   "clientChanges",
+  "clientOverflow",
 ]);
 
 // Search engines whose fields are per-query scratch (stamps, scores, open

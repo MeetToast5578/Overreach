@@ -1,3 +1,4 @@
+import type { ProvinceViewUpdate } from "../overreach/ProvinceView";
 import { AllPlayersStats, ClientID, Winner } from "../Schemas";
 import {
   EmojiMessage,
@@ -20,6 +21,8 @@ import { TileRef } from "./GameMap";
 
 export interface GameUpdateViewData {
   tick: number;
+  // Overreach: province changes for the client (overreach/ProvinceView.ts).
+  provinces?: ProvinceViewUpdate;
   updates: GameUpdates;
   /**
    * Packed tile updates as `[tileRef, state]` uint32 pairs.

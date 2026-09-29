@@ -16,6 +16,7 @@ import {
   ProvinceRecord,
   Provinces,
 } from "../../src/core/overreach/Provinces";
+import { ProvinceViewTracker } from "../../src/core/overreach/ProvinceView";
 import {
   encodeOwners,
   Scenario,
@@ -195,6 +196,24 @@ describe("Provinces", () => {
     provinces.applyFlips();
     expect(provinces.records[2]!.owner).toBe(a.smallID());
     expect(provinces.violation()).toBeNull();
+  });
+
+  test("the client gets the layer once, then changed tiles and records", async () => {
+    const { game, a, provinces } = await stripes();
+    const view = new ProvinceViewTracker();
+    const first = view.next(game)!;
+    expect(first.layer).toEqual(provinces.prov);
+    expect(first.records).toHaveLength(10);
+    expect(view.next(game)).toBeUndefined();
+
+    a.conquer(game.ref(10, 7)); // joins province 1
+    provinces.rename(3, "Third");
+    const next = view.next(game)!;
+    expect(next.layer).toBeUndefined();
+    expect([...next.tiles!]).toEqual([game.ref(10, 7), 1]);
+    expect(next.records).toEqual([
+      [3, { name: "Third", owner: 0, capital: null }],
+    ]);
   });
 
   test("generated provinces cover the land and nothing else", async () => {

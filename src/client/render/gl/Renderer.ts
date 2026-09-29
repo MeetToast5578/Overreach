@@ -11,6 +11,7 @@
 
 import type { Config } from "../../../core/configuration/Config";
 import type { MapLayer } from "../../../core/game/TerrainMapLoader";
+import { ProvincePass } from "../../overreach/ProvincePass";
 import { translateText } from "../../Utils";
 import type { SpiralRibbon } from "../frame/SpiralTrails";
 import type {
@@ -147,6 +148,7 @@ export class GPURenderer {
   private heatManager: HeatManager;
   private affiliationPalette: AffiliationPalette;
   private coordinateGridPass: CoordinateGridPass;
+  private provincePass: ProvincePass; // Overreach
   private spawnOverlayPass: SpawnOverlayPass;
   private smallPlayerGlowPass: SmallPlayerGlowPass;
   private inSpawnPhase = false;
@@ -639,6 +641,7 @@ export class GPURenderer {
       mapH,
       this.settings,
     );
+    this.provincePass = new ProvincePass(gl, mapW, mapH, this.settings, config);
     try {
       this.gridView = window.localStorage.getItem(GRID_VIEW_KEY) === "true";
     } catch {
@@ -1361,6 +1364,7 @@ export class GPURenderer {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
     this.spawnOverlayPass.draw(cam);
+    this.provincePass.drawBorders(cam, zoom); // Overreach, under the borders
     if (pe.borderStamp) this.borderStampPass.draw(cam);
     if (pe.railroad) this.railroadPass.draw(cam, zoom);
     if (pe.unit) this.unitPass.drawGround(cam);
@@ -1392,6 +1396,7 @@ export class GPURenderer {
     // Grid shows on either trigger; names hide only under alt-view (space
     // hold), not under the persistent M-key gridView toggle.
     if (this.gridView || this.altView) this.coordinateGridPass.draw(cam, zoom);
+    if (pe.name && !this.altView) this.provincePass.drawNames(cam, zoom);
     if (pe.name && !this.altView)
       this.namePass.draw(cam, this.nightCompositePass.getAmbient());
 
@@ -1495,6 +1500,7 @@ export class GPURenderer {
     this.heatManager.dispose();
     this.affiliationPalette.dispose();
     this.coordinateGridPass.dispose();
+    this.provincePass.dispose();
     this.spawnOverlayPass.dispose();
     this.smallPlayerGlowPass.dispose();
     this.railroadPass.dispose();

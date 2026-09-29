@@ -297,6 +297,51 @@ Checked:
   - a province flips when its city falls;
   - a split keeps the tile total.
 
+**Status (29 Sep 2026): done.**
+
+- **Two layers, not one.** Each tile has a home province (geography, changed only by sandbox edits) and a current
+  province (the one it counts in). A conquered tile whose home province isn't its owner's is "loose". It joins the
+  owner's neighbouring province with the longest shared edge. A landing with no such neighbour starts a new province,
+  named after the home one, which ends with its last tile. Flipping brings loose tiles home.
+- **Rules as built:**
+  - a province flips to X when X takes its capital or holds more than half its home tiles;
+  - flipping conquers the old owner's tiles there through `conquer()`;
+  - allies never flip each other's provinces;
+  - an unowned province goes to the first player to take a tile of it, and an abandoned one to whoever holds most of
+    it;
+  - flips wait for `ProvinceExecution`'s next tick, so an attack never has tiles change under it mid-conquest.
+- **Engine:**
+  - `GameImpl.conquer()` and `relinquish()` each gain one line;
+  - `ProvinceExecution` owns the layers and saves them in snapshots;
+  - `GameRunner` adds provinces to every game, and a scenario adds them once its nations are placed;
+  - `GameConfig.provinces = false` plays classic OpenFront.
+- **Default provinces:**
+  - World 1836 has the legacy raster cut where 1836 borders cross it: 5,352 provinces, 4,139 with their main town as
+    capital. The scenario file grew to 667 KB;
+  - other maps grow provinces from seeds about 12 tiles apart (~144 tiles each), with made-up names. The plan's
+    "per nation from its cities" doesn't work at a game's start (there are no cities yet), and OpenFront's terrain
+    has no rivers.
+- **Effect on play:** flips make conquest faster. In the full-game snapshot test's random game, 18% of the land
+  changes hands by flips, and its scripted humans die before building MIRVs. So that test's free-for-all runs with
+  provinces off, and its teams and water-nukes games keep them.
+- **Sandbox:** a Provinces tool with Select, Brush, New, Split (two clicks), Merge, Capital, and a name box with
+  Rename. These edits can't be undone yet. The hover line shows the province, and Save stores the provinces as they
+  are now.
+- **Drawing:** `ProvincePass` draws thin dark lines between provinces, fading in with zoom, under the national
+  borders, plus each province's name once it is about 45 px across. Names don't overlap each other; biggest wins.
+  The worker sends the layer once, then changed tiles and records (`ProvinceView.ts`).
+- **Checked:**
+  - 14 tests in `tests/overreach/Provinces.test.ts`:
+    - the owner rule through 10,000 random turns of painting, attacks, releases and province edits;
+    - flips by majority and by capital, allies, landings, and claiming or abandoning a province;
+    - a split keeps the tile total; merge, create, assign;
+    - drawn provinces, World 1836 (Paris is France's), snapshots, and the client updates;
+  - one sandbox-intent test in `Sandbox.test.ts`;
+  - speed with 250 nations: mean tick 4.6 ms (was 4.0), p99 13 ms;
+  - in the browser: province borders and town names across Europe in 1836, and select, split, rename and Save in a
+    sandbox.
+- **Next:** F5, named cities (capitals become City buildings).
+
 ### F5: Named cities
 
 - OpenFront's City is a building that raises the population cap. Extend it with a name, population, founding tick and

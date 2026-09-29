@@ -16,6 +16,7 @@ import type { Controller } from "../Controller";
 import type { TransformHandler } from "../TransformHandler";
 import { renderNumber, renderTroops, translateText } from "../Utils";
 import type { GameView, PlayerView } from "../view";
+import { provinceLayer } from "./ProvinceLayer";
 import {
   SandboxStepEvent,
   SendSandboxIntentEvent,
@@ -31,7 +32,8 @@ type Tool =
   | "build"
   | "war"
   | "peace"
-  | "ally";
+  | "ally"
+  | "province";
 const TOOLS: Tool[] = [
   "select",
   "paint",
@@ -41,6 +43,17 @@ const TOOLS: Tool[] = [
   "war",
   "peace",
   "ally",
+  "province",
+];
+// The Provinces tool's modes (Provinces.ts edits).
+type ProvinceMode = "select" | "brush" | "new" | "split" | "merge" | "capital";
+const PROVINCE_MODES: ProvinceMode[] = [
+  "select",
+  "brush",
+  "new",
+  "split",
+  "merge",
+  "capital",
 ];
 type Structure = (typeof SANDBOX_STRUCTURES)[number];
 // What Undo sends back: a stroke's tiles by their previous owner, a new
@@ -104,6 +117,14 @@ export class SandboxPanel extends LitElement implements Controller {
   @state() private controlledID: string | null = null;
   @state() private aiOff = new Set<string>();
   private resumeAi = false;
+  // The Provinces tool: its mode, the selected province (0 for none), the
+  // name box, a split's first point and a new province's stroke.
+  @state() private provinceMode: ProvinceMode = "select";
+  @state() private provinceID = 0;
+  @state() private provinceName = "";
+  private splitFrom: TileRef | null = null;
+  private newProvince = new Set<TileRef>();
+  private selectProvinceAt: TileRef | null = null;
 
   private stroke = false;
   private swallowUp = false;
@@ -130,6 +151,12 @@ export class SandboxPanel extends LitElement implements Controller {
   }
 
   tick() {
+    // A new province exists once the update after its intent arrives.
+    if (this.selectProvinceAt !== null && provinceLayer !== null) {
+      const id = provinceLayer.province(this.selectProvinceAt);
+      if (id !== 0) this.provinceID = id;
+      this.selectProvinceAt = null;
+    }
     const c = this.controlledID;
     if (c !== null && !this.game.player(c).isAlive()) this.control(null);
     this.requestUpdate();
@@ -180,8 +207,9 @@ export class SandboxPanel extends LitElement implements Controller {
     // from the panel's inputs, or Ctrl+Z would undo their text instead.
     (document.activeElement as HTMLElement | null)?.blur();
     this.swallowUp = true;
-    if (this.tool === "paint" || this.tool === "erase") {
+    if (this.brushing()) {
       if (this.tool === "paint" && this.selectedID === null) return;
+      if (this.provinceBrush() && this.provinceID === 0) return;
       this.stroke = true;
       this.last = null;
       this.stamp(e);
@@ -207,8 +235,42 @@ export class SandboxPanel extends LitElement implements Controller {
       this.stroke = false;
       this.flush();
       this.endStroke();
+      if (this.tool === "province" && this.provinceMode === "new") {
+        this.createProvince();
+      }
     }
   };
+
+  private brushing(): boolean {
+    return (
+      this.tool === "paint" ||
+      this.tool === "erase" ||
+      (this.tool === "province" &&
+        (this.provinceMode === "brush" || this.provinceMode === "new"))
+    );
+  }
+
+  // The brush paints home tiles into the selected province (not "new").
+  private provinceBrush(): boolean {
+    return this.tool === "province" && this.provinceMode === "brush";
+  }
+
+  private typedProvinceName(): string {
+    const name = this.provinceName.replace(NAME_CHARS, "").trim().slice(0, 40);
+    return name || translateText("sandbox.province_default");
+  }
+
+  private createProvince() {
+    const tiles = [...this.newProvince].slice(0, MAX_PAINT_TILES);
+    this.newProvince.clear();
+    if (tiles.length === 0) return;
+    this.send({
+      kind: "province_create",
+      tiles,
+      name: this.typedProvinceName(),
+    });
+    this.selectProvinceAt = tiles[0];
+  }
 
   private onKey = (e: KeyboardEvent) => {
     if (e.key === "Escape" && this.tool !== null) this.tool = null;
@@ -307,6 +369,20 @@ export class SandboxPanel extends LitElement implements Controller {
     const owner = this.tool === "erase" ? null : this.selectedID;
     const tiles = Array.from(this.pending);
     this.pending.clear();
+    if (this.tool === "province") {
+      if (this.provinceMode === "new") {
+        tiles.forEach((t) => this.newProvince.add(t));
+        return;
+      }
+      for (let i = 0; i < tiles.length; i += MAX_PAINT_TILES) {
+        this.send({
+          kind: "province_assign",
+          tiles: tiles.slice(i, i + MAX_PAINT_TILES),
+          province: this.provinceID,
+        });
+      }
+      return;
+    }
     for (const t of tiles) {
       const o = this.game.owner(t);
       const was = o.isPlayer() ? (o as PlayerView).id() : null;
@@ -330,6 +406,8 @@ export class SandboxPanel extends LitElement implements Controller {
       case "select":
         this.selectedID = target?.id() ?? null;
         return;
+      case "province":
+        return this.useProvinceTool(tile);
       case "nation": {
         const name = this.newName.replace(NAME_CHARS, "").trim().slice(0, 40);
         if (name.length === 0) {
@@ -377,6 +455,42 @@ export class SandboxPanel extends LitElement implements Controller {
     }
   }
 
+  private useProvinceTool(tile: TileRef) {
+    const here = provinceLayer?.province(tile) ?? 0;
+    const selected = this.provinceID;
+    switch (this.provinceMode) {
+      case "select":
+        this.provinceID = here;
+        this.provinceName = provinceLayer?.records[here]?.name ?? "";
+        return;
+      case "split":
+        if (selected === 0) return;
+        if (this.splitFrom === null) {
+          this.splitFrom = tile;
+          return;
+        }
+        this.send({
+          kind: "province_split",
+          province: selected,
+          a: this.splitFrom,
+          b: tile,
+          name: this.typedProvinceName(),
+        });
+        this.splitFrom = null;
+        return;
+      case "merge":
+        if (selected !== 0 && here !== 0 && here !== selected) {
+          this.send({ kind: "province_merge", into: selected, from: here });
+        }
+        return;
+      case "capital":
+        if (selected !== 0) {
+          this.send({ kind: "province_capital", province: selected, tile });
+        }
+        return;
+    }
+  }
+
   private selected(): PlayerView | null {
     if (this.selectedID === null) return null;
     return (
@@ -404,7 +518,78 @@ export class SandboxPanel extends LitElement implements Controller {
     const name = owner.isPlayer()
       ? (owner as PlayerView).displayName()
       : translateText("sandbox.unclaimed");
-    return `${where} · ${name}`;
+    const province =
+      provinceLayer?.records[provinceLayer.province(t)]?.name ?? "";
+    return `${where} · ${name}${province ? ` · ${province}` : ""}`;
+  }
+
+  private renderProvinceTool(btn: (on: boolean) => string) {
+    const id = this.provinceID;
+    const layer = provinceLayer;
+    const rec = layer?.records[id] ?? null;
+    const needsOne =
+      this.provinceMode !== "select" && this.provinceMode !== "new";
+    let tiles = 0;
+    if (rec !== null) for (const p of layer!.prov) if (p === id) tiles++;
+    const owner = rec?.owner ? this.game.playerBySmallID(rec.owner) : null;
+    return html`<div class="space-y-1">
+      <div class="flex flex-wrap gap-1">
+        ${PROVINCE_MODES.map(
+          (m) =>
+            html`<button
+              class=${btn(this.provinceMode === m)}
+              @click=${() => {
+                this.provinceMode = m;
+                this.splitFrom = null;
+              }}
+            >
+              ${translateText(`sandbox.province_${m}`)}
+            </button>`,
+        )}
+      </div>
+      <div class="flex gap-1">
+        <input
+          class="min-w-0 flex-1 rounded bg-white/10 px-1"
+          maxlength="40"
+          placeholder=${translateText("sandbox.province_name")}
+          .value=${this.provinceName}
+          @input=${(e: Event) =>
+            (this.provinceName = (e.target as HTMLInputElement).value)}
+        />
+        <button
+          class="${btn(false)} disabled:opacity-40"
+          ?disabled=${rec === null}
+          @click=${() =>
+            this.send({
+              kind: "province_rename",
+              province: id,
+              name: this.typedProvinceName(),
+            })}
+        >
+          ${translateText("sandbox.rename")}
+        </button>
+      </div>
+      ${rec === null
+        ? nothing
+        : html`<div>
+            ${translateText("sandbox.province_info", {
+              name: rec.name,
+              tiles,
+              owner: owner?.isPlayer()
+                ? (owner as PlayerView).displayName()
+                : translateText("sandbox.unclaimed"),
+            })}
+          </div>`}
+      <div
+        class=${needsOne && rec === null ? "text-yellow-300" : "text-white/60"}
+      >
+        ${translateText(
+          needsOne && rec === null
+            ? "sandbox.province_none"
+            : `sandbox.province_hint_${this.provinceMode}`,
+        )}
+      </div>
+    </div>`;
   }
 
   render() {
@@ -473,7 +658,8 @@ export class SandboxPanel extends LitElement implements Controller {
               </button>`,
           )}
         </div>
-        ${this.tool === "paint" || this.tool === "erase"
+        ${this.tool === "province" ? this.renderProvinceTool(btn) : nothing}
+        ${this.brushing()
           ? html`<label class="flex items-center gap-2">
               ${translateText("sandbox.brush")}
               <input

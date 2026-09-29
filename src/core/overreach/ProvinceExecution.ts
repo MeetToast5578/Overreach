@@ -37,8 +37,6 @@ export class ProvinceExecution implements Execution {
 
   tick(): void {
     this.provinces!.applyFlips();
-    // ponytail: nothing sends these to the client yet (F4 drawing will).
-    this.provinces!.clientChanges = [];
   }
 
   isActive(): boolean {

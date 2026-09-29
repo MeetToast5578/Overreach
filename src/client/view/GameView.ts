@@ -30,6 +30,7 @@ import { UserSettings } from "../../core/game/UserSettings";
 import { ClientID, GameID, Player, PlayerCosmetics } from "../../core/Schemas";
 import { formatPlayerDisplayName } from "../../core/Util";
 import { WorkerClient } from "../../core/worker/WorkerClient";
+import { provinceLayer, startProvinceLayer } from "../overreach/ProvinceLayer";
 import { computeAllianceClusters } from "../render/frame/derive/AllianceClusters";
 import { extractAttackRings } from "../render/frame/derive/AttackRings";
 import { extractNukeTelegraphs } from "../render/frame/derive/NukeTelegraphs";
@@ -164,6 +165,7 @@ export class GameView implements GameMap {
     humans: Player[],
   ) {
     this._map = this._mapData.gameMap;
+    startProvinceLayer(this._map.width(), this._map.height()); // Overreach
     this.lastUpdate = null;
     this.unitGrid = new UnitGrid(this._map);
     this._cosmetics = new Map(
@@ -288,6 +290,7 @@ export class GameView implements GameMap {
     this.toDelete.clear();
 
     this.lastUpdate = gu;
+    provinceLayer?.apply(gu.provinces); // Overreach
 
     this.updatedTiles = [];
     this.updatedTerrainTiles = [];

@@ -40,8 +40,10 @@ export class Provinces {
   private nbuf: TileRef[] = [0, 0, 0, 0];
   // Provinces to check for a flip on the next tick.
   readonly pending = new Set<number>();
-  // Tiles whose current province changed, for the client. Not saved.
+  // Tiles whose current province changed, for the client (ProvinceView);
+  // on overflow the client gets the whole layer instead. Not saved.
   clientChanges: TileRef[] = [];
+  clientOverflow = false;
 
   /**
    * `records[0]` is unused, and so is any slot freed by a new province that
@@ -295,6 +297,10 @@ export class Provinces {
     if (old !== 0 && old !== this.home[t]) this.removeLoose(old, t);
     this.prov[t] = q;
     if (q !== 0 && q !== this.home[t]) this.addLoose(q, t);
+    if (this.clientChanges.length >= this.home.length) {
+      this.clientChanges = [];
+      this.clientOverflow = true;
+    }
     this.clientChanges.push(t);
   }
 
