@@ -17,6 +17,7 @@ import type {
   SnapshotReader,
   SnapshotWriter,
 } from "../snapshot/SnapshotContext";
+import { ProvinceExecution } from "./ProvinceExecution";
 import { forEachOwnedTile } from "./Scenario";
 
 // Places GameConfig.scenario on the first tick: its nations, their tiles
@@ -105,6 +106,9 @@ export class ScenarioExecution implements Execution {
       }
     }
     g.endSpawnPhase();
+    if (g.config().gameConfig().provinces !== false) {
+      g.addExecution(new ProvinceExecution(this.gameID));
+    }
   }
 
   isActive(): boolean {

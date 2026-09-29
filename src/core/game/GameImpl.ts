@@ -6,6 +6,7 @@ import {
   SharedWaterCache,
   SharedWaterCacheSnapshot,
 } from "../execution/nation/SharedWaterCache";
+import type { Provinces } from "../overreach/Provinces";
 import { AbstractGraph } from "../pathfinding/algorithms/AbstractGraph";
 import { WaterPathFinder } from "../pathfinding/PathFinder";
 import { PathFinder } from "../pathfinding/types";
@@ -113,6 +114,8 @@ export class GameImpl implements Game {
   _playersBySmallID: Player[] = [];
 
   private execs: Execution[] = [];
+  // Overreach: told of every ownership change (set by ProvinceExecution).
+  provinces: Provinces | undefined;
   private _width: number;
   private _height: number;
   _terraNullius: TerraNulliusImpl;
@@ -818,6 +821,11 @@ export class GameImpl implements Game {
     this.updateBorders(tile);
     this._map.setFallout(tile, false);
     this.recordTileUpdate(tile);
+    this.provinces?.onConquer(
+      tile,
+      owner.smallID(),
+      previousOwner.isPlayer() ? previousOwner.smallID() : 0,
+    );
   }
 
   relinquish(tile: TileRef) {
@@ -838,6 +846,7 @@ export class GameImpl implements Game {
     this._map.setOwnerID(tile, 0);
     this.updateBorders(tile);
     this.recordTileUpdate(tile);
+    this.provinces?.onRelinquish(tile, previousOwner.smallID());
   }
 
   // Reusable neighbor buffer to avoid closures/allocation in updateBorders.

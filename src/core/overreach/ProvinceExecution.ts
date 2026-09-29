@@ -1,0 +1,104 @@
+import { z } from "zod";
+import type { Execution, Game } from "../game/Game";
+import type { GameImpl } from "../game/GameImpl";
+import type { GameID } from "../Schemas";
+import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
+import type {
+  ExecRecord,
+  SnapshotReader,
+  SnapshotWriter,
+} from "../snapshot/SnapshotContext";
+import { zInt, zU16Array } from "../snapshot/SnapshotType";
+import { simpleHash } from "../Util";
+import { generateProvinces, Provinces } from "./Provinces";
+
+// Owns the game's provinces (Provinces.ts): builds them on its first tick,
+// from the current tile owners, and flips provinces every tick after.
+// GameRunner adds it to a new game; ScenarioExecution adds it once its
+// nations are placed, so a scenario's borders decide who owns what.
+export class ProvinceExecution implements Execution {
+  private provinces: Provinces | null = null;
+
+  constructor(private gameID: GameID) {}
+
+  init(mg: Game): void {
+    const { home, records } = generateProvinces(mg, simpleHash(this.gameID));
+    this.attach(mg, new Provinces(mg, home, records));
+  }
+
+  private attach(mg: Game, provinces: Provinces): void {
+    this.provinces = provinces;
+    (mg as GameImpl).provinces = provinces;
+  }
+
+  tick(): void {
+    this.provinces!.applyFlips();
+    // ponytail: nothing sends these to the client yet (F4 drawing will).
+    this.provinces!.clientChanges = [];
+  }
+
+  isActive(): boolean {
+    return true;
+  }
+
+  activeDuringSpawnPhase(): boolean {
+    return true;
+  }
+
+  snapshot(_w: SnapshotWriter): ExecRecord {
+    const p = this.provinces;
+    return ProvinceExecutionSnapshot.write({
+      gameID: this.gameID,
+      layers:
+        p === null
+          ? null
+          : {
+              home: p.home,
+              prov: p.prov,
+              records: p.records.map((r) => (r === null ? null : { ...r })),
+              pending: [...p.pending],
+            },
+    });
+  }
+
+  restoreSnapshot(s: ProvinceState, r: SnapshotReader): void {
+    this.gameID = s.gameID;
+    this.provinces = null;
+    if (s.layers === null) return;
+    const p = new Provinces(
+      r.game,
+      s.layers.home,
+      s.layers.records.map((rec) => (rec === null ? null : { ...rec })),
+      s.layers.prov,
+    );
+    s.layers.pending.forEach((id) => p.pending.add(id));
+    this.attach(r.game, p);
+  }
+}
+
+const ProvinceStateSchema = z.object({
+  gameID: z.string(),
+  layers: z
+    .object({
+      home: zU16Array(),
+      prov: zU16Array(),
+      records: z
+        .object({
+          name: z.string(),
+          owner: zInt(),
+          capital: zInt().nullable(),
+        })
+        .nullable()
+        .array(),
+      pending: zInt().array(),
+    })
+    .nullable(),
+});
+type ProvinceState = z.infer<typeof ProvinceStateSchema>;
+
+export const ProvinceExecutionSnapshot = execSnapshotType({
+  name: "OverreachProvinces",
+  version: 1,
+  schema: ProvinceStateSchema,
+  cls: () => ProvinceExecution,
+});

@@ -570,6 +570,7 @@ export const GameConfigSchema = z.object({
   instantBuild: z.boolean(),
   sandbox: z.boolean().optional(), // Overreach sandbox mode: god-mode intents allowed
   scenario: zb.json(ScenarioSchema).optional(), // Overreach: pre-drawn nations (ScenarioExecution)
+  provinces: z.boolean().optional(), // Overreach: false plays without provinces
   disableNavMesh: z.boolean().optional(),
   disableAlliances: z.boolean().nullable().optional(),
   disableClanTags: z.boolean().optional(),

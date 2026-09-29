@@ -89,7 +89,10 @@ function expectOnTrack(runner: GameRunner, ref: Reference): void {
 }
 
 const VARIANTS: [string, Partial<GameConfig>][] = [
-  ["free for all", {}],
+  // Overreach: without provinces, whose flips change how this random game
+  // plays out, so that it still reaches every execution type. The other two
+  // variants keep them.
+  ["free for all", { provinces: false }],
   // Water nukes rewrite terrain and the water graph mid-game.
   ["water nukes", { waterNukes: true }],
   ["teams", { gameMode: GameMode.Team, playerTeams: 2 }],
@@ -162,7 +165,7 @@ describe.each(VARIANTS)("full game snapshots: %s", (_, overrides) => {
   test(
     "the game exercised every execution type",
     () => {
-      if (Object.keys(overrides).length > 0) return; // checked once, on FFA
+      if (overrides.provinces !== false) return; // checked once, on FFA
       // Runs during the spawn phase and finishes inside init, so it is never
       // alive at a tick boundary. BasicExecutions.test.ts covers it directly.
       // OverreachSandbox runs during the spawn phase and ends a tick later, so
@@ -170,10 +173,12 @@ describe.each(VARIANTS)("full game snapshots: %s", (_, overrides) => {
       // tests/overreach/Sandbox.test.ts round-trips it directly.
       // OverreachScenario only exists in scenario games, for their first tick;
       // tests/overreach/Scenario.test.ts round-trips it.
+      // OverreachProvinces is off in this variant; the other two restore it.
       const neverStored = new Set([
         "Pause",
         "OverreachSandbox",
         "OverreachScenario",
+        "OverreachProvinces",
       ]);
       const missing = EXECUTION_SNAPSHOT_TYPES.map((t) => t.name).filter(
         (name) => !reference.execTypes.has(name) && !neverStored.has(name),

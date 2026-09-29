@@ -28,6 +28,7 @@ import { GameMapLoader } from "./game/GameMapLoader";
 import { ErrorUpdate, GameUpdateViewData } from "./game/GameUpdates";
 import { createNationsForGame } from "./game/NationCreation";
 import { loadTerrainMap as loadGameMap } from "./game/TerrainMapLoader";
+import { ProvinceExecution } from "./overreach/ProvinceExecution";
 import { ScenarioExecution } from "./overreach/ScenarioExecution";
 import { PseudoRandom } from "./PseudoRandom";
 import { ClientID, GameStartInfo, Turn } from "./Schemas";
@@ -170,8 +171,11 @@ export class GameRunner {
 
   init() {
     // Overreach: a scenario places its nations first, then ends the spawn phase.
+    // Overreach: provinces; a scenario adds them once its nations are placed.
     if (this.game.config().gameConfig().scenario !== undefined) {
       this.game.addExecution(new ScenarioExecution(this.execManager.gameID()));
+    } else if (this.game.config().gameConfig().provinces !== false) {
+      this.game.addExecution(new ProvinceExecution(this.execManager.gameID()));
     }
     // Overreach: a sandbox needn't wait for the player to spawn.
     if (

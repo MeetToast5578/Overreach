@@ -166,6 +166,9 @@ export const DERIVED_FIELDS = new Set<string>([
   // and only read inside it. (AiAttackBehavior.nbuf is covered above.)
   "_sharedWaterComponents",
   "reachableStationsCache",
+  // Overreach Provinces: rebuilt from the layers; for the client
+  "provinceIndex",
+  "clientChanges",
 ]);
 
 // Search engines whose fields are per-query scratch (stamps, scores, open
