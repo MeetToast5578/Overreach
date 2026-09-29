@@ -4,6 +4,7 @@ import { PublicGames } from "../core/Schemas";
 import { decodeLobbyMessage } from "../core/ZbinWire";
 import { clientPlatform } from "./ClientPlatform";
 import { showInGameAlert } from "./InGameModal";
+import { isStaticSite } from "./overreach/StaticSite";
 import {
   ensureServerList,
   refreshServerList,
@@ -357,7 +358,10 @@ export class PublicLobbySocket {
       this.wsConnectionAttempts++;
     }
     if (this.wsConnectionAttempts >= this.maxWsAttempts && this.giveUp()) {
-      void showInGameAlert(translateText("error_modal.connection_error"));
+      // Overreach: a static site has no lobby server to lose.
+      if (!isStaticSite()) {
+        void showInGameAlert(translateText("error_modal.connection_error"));
+      }
     }
     this.scheduleReconnect(rediscover);
   }

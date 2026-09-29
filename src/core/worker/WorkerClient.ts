@@ -95,7 +95,10 @@ export class WorkerClient {
         id: messageId,
         gameStartInfo: this.gameStartInfo,
         clientID: this.clientID,
-        cdnBase: getCdnBase(),
+        // Overreach: a same-origin build (empty CDN base, e.g. the static
+        // site) gives the worker the page's origin; a blob worker can't
+        // resolve a relative URL.
+        cdnBase: getCdnBase() || (globalThis.location?.origin ?? ""),
         snapshot: this.snapshotToRestore,
       });
 

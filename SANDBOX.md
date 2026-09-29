@@ -529,6 +529,24 @@ technology, the German Confederation) are still to come.**
 - **Before anyone else plays:** make the repo public and wire up the Source link.
 - **Multiplayer later:** needs their Node server running somewhere (they ship a `Dockerfile`).
 
+**Status (29 Sep 2026): the static build is ready. Deploying it and making the repo public are waiting for you.**
+
+- **`npm run build-static`** builds for production, then writes `static-site/` (ignored by git). That's the build
+  plus an `index.html` rendered once, the way upstream renders its per-version static page (`perServer: false`: it
+  names no server). The API points at localhost, so nothing calls OpenFront's, and there's no telemetry.
+- **Two fixes it needed:**
+  - the web worker got an empty CDN base and couldn't resolve its map URLs. A same-origin build now gives it the
+    page's origin (one line in `WorkerClient`);
+  - the homepage's lobby socket, finding no server, put up a blocking "Connection error!". The static page sets
+    `OVERREACH_STATIC_SITE` and the alert is skipped (one line in `LobbySocket`).
+- **Checked:** served with `python -m http.server`, World 1836 starts and runs as France, with the date bar and the
+  era locks, and no errors.
+- **Size:** 638 MB in 2,102 files, 588 MB of it OpenFront's 130 maps (about 4.5 MB each). That fits GitHub Pages
+  (1 GB) and Cloudflare Pages (20,000 files, 25 MB each). For a smaller host, drop maps from `static-site/_assets/maps`
+  (the map list would still show them).
+- **To publish:** upload `static-site/` to the host of your choice. Before anyone else plays, make the repo public
+  and point the Source link at it (AGPL).
+
 ---
 
 ## 6. What happens to the older plans
