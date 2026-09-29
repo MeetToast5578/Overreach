@@ -37,6 +37,9 @@ export const ScenarioSchema = z.object({
   // Every tile's owner in map order, as runs: [owner, length, owner, length,
   // ...]. The owner is 1 + an index into `nations`, or 0 for nobody.
   owners: z.number().int().nonnegative().array(),
+  // The nation (index) the single-player human plays: they start with its
+  // land instead of the AI. Ignored in a sandbox, where the human observes.
+  player: z.number().int().nonnegative().optional(),
 });
 export type Scenario = z.infer<typeof ScenarioSchema>;
 

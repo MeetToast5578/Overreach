@@ -30,7 +30,7 @@ import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { GameStartingModal } from "./GameStartingModal";
 import { showInGameAlert } from "./InGameModal";
 import { JoinLobbyEvent } from "./Main";
-import "./overreach/ScenarioFile";
+import { scenarioPlayer } from "./overreach/ScenarioFile";
 import { fallbackPlayerName, ResolvedPlayerName } from "./PlayerName";
 import { UsernameInput } from "./UsernameInput";
 import {
@@ -498,16 +498,17 @@ export class SinglePlayerModal extends BaseModal {
         >
           ${this.activeTab === "sandbox"
             ? html`<p class="mb-4 text-sm text-white/70">
-                  ${translateText("sandbox.intro")}
-                </p>
-                <scenario-picker
-                  .scenario=${this.scenario}
-                  @scenario-change=${(e: CustomEvent<Scenario | null>) => {
-                    this.scenario = e.detail;
-                    if (e.detail !== null) this.selectedMap = e.detail.map;
-                  }}
-                ></scenario-picker>`
+                ${translateText("sandbox.intro")}
+              </p>`
             : null}
+          <scenario-picker
+            .scenario=${this.scenario}
+            .pick=${this.activeTab !== "sandbox"}
+            @scenario-change=${(e: CustomEvent<Scenario | null>) => {
+              this.scenario = e.detail;
+              if (e.detail !== null) this.selectedMap = e.detail.map;
+            }}
+          ></scenario-picker>
           <game-config-settings
             class="block"
             .sectionGapClass=${"space-y-6"}
@@ -1141,6 +1142,10 @@ export class SinglePlayerModal extends BaseModal {
       // The ad is long enough that the modal can be closed while it runs.
       if (attempt !== this.startAttempt) return;
 
+      const asNation =
+        this.activeTab !== "sandbox" && this.scenario
+          ? scenarioPlayer(this.scenario)
+          : {};
       this.dispatchEvent(
         new CustomEvent("join-lobby", {
           detail: {
@@ -1153,6 +1158,8 @@ export class SinglePlayerModal extends BaseModal {
                   username: resolvedName.name,
                   clanTag: usernameInput?.getClanTag() ?? null,
                   cosmetics,
+                  // Overreach: playing a scenario's nation, as that nation.
+                  ...asNation,
                 },
               ],
               config: {
@@ -1213,12 +1220,13 @@ export class SinglePlayerModal extends BaseModal {
                   : {}),
                 // Overreach: a loaded scenario sets the map and brings its own
                 // nations, instead of the map's nations and tribes.
-                ...(this.activeTab === "sandbox" && this.scenario
+                ...(this.scenario
                   ? {
                       gameMap: this.scenario.map,
                       gameMapSize: this.scenario.mapSize,
                       nations: "disabled" as const,
                       bots: 0,
+                      randomSpawn: false, // would move the player off their land
                       scenario: this.scenario,
                     }
                   : {}),
@@ -1228,6 +1236,7 @@ export class SinglePlayerModal extends BaseModal {
             source: "singleplayer",
             // A sandbox starts as an observer; the player never spawns.
             spectator: this.activeTab === "sandbox",
+            playerName: asNation.username,
           } satisfies JoinLobbyEvent,
           bubbles: true,
           composed: true,

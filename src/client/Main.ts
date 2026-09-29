@@ -259,6 +259,8 @@ export interface JoinLobbyEvent {
   publicLobbyInfo?: GameInfo | PublicGameInfo;
   // Watch without playing.
   spectator?: boolean;
+  // Overreach: play under this name, with no clan tag (a scenario nation's).
+  playerName?: string;
 }
 
 /**
@@ -1477,8 +1479,10 @@ class Client {
         verified: resolvedName.verified,
       }),
       turnstileToken: await this.getTurnstileToken(lobby),
-      playerName: resolvedName.name,
-      playerClanTag: this.usernameInput?.getClanTag() ?? null,
+      playerName: lobby.playerName ?? resolvedName.name,
+      playerClanTag: lobby.playerName
+        ? null
+        : (this.usernameInput?.getClanTag() ?? null),
       clanTagCheck: this.usernameInput?.getClanCheck(),
       playerRole,
       gameStartInfo:

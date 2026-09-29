@@ -1874,6 +1874,7 @@
     "save_hint": "Download this world as a scenario, to load from the Sandbox tab",
     "scenario_invalid": "That file isn't an Overreach scenario.",
     "scenario_loaded": "Scenario: {nations} nations on {map}",
+    "scenario_world_1836": "World 1836",
     "set": "Set",
     "step": "Step",
     "step_hint": "Pause the game, then step one turn at a time",
@@ -1893,7 +1894,8 @@
     "unclaimed": "Unclaimed",
     "undo": "Undo",
     "undo_hint": "Undo your last paint stroke, new nation, or troops or gold change (Ctrl+Z)",
-    "water": "Water"
+    "water": "Water",
+    "your_nation": "Your nation"
   },
   "select_lang": {
     "title": "Select Language"

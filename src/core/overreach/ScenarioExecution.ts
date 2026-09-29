@@ -47,23 +47,29 @@ export class ScenarioExecution implements Execution {
       return;
     }
 
-    const players: (Player | null)[] = s.nations.map((n) =>
-      g.hasPlayer(n.id)
-        ? null
-        : g.addPlayer(
-            new PlayerInfo(
-              n.name,
-              PlayerType.Nation,
-              null,
-              n.id,
-              false,
-              null,
-              [],
-              null,
-              n.flag ?? null,
-              n.color ?? null,
+    const human =
+      s.player !== undefined && g.config().gameConfig().sandbox !== true
+        ? g.allPlayers().find((p) => p.type() === PlayerType.Human)
+        : undefined;
+    const players: (Player | null)[] = s.nations.map((n, i) =>
+      human !== undefined && i === s.player
+        ? human
+        : g.hasPlayer(n.id)
+          ? null
+          : g.addPlayer(
+              new PlayerInfo(
+                n.name,
+                PlayerType.Nation,
+                null,
+                n.id,
+                false,
+                null,
+                [],
+                null,
+                n.flag ?? null,
+                n.color ?? null,
+              ),
             ),
-          ),
     );
     forEachOwnedTile(s.owners, (tile, owner) => {
       const p = players[owner - 1];
@@ -81,8 +87,9 @@ export class ScenarioExecution implements Execution {
         if (diff > 0n) p.addGold(diff);
         else if (diff < 0n) p.removeGold(-diff);
       }
+      g.addExecution(new PlayerExecution(p));
+      if (p === human) return;
       g.addExecution(
-        new PlayerExecution(p),
         new NationExecution(
           this.gameID,
           new Nation(new Cell(g.x(first), g.y(first)), p.info()),

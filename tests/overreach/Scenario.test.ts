@@ -1,8 +1,11 @@
+import fs from "fs";
+import path from "path";
 import { NationExecution } from "../../src/core/execution/NationExecution";
 import {
   Game,
   GameMapSize,
   GameMapType,
+  PlayerInfo,
   PlayerType,
 } from "../../src/core/game/Game";
 import { GameImpl } from "../../src/core/game/GameImpl";
@@ -49,11 +52,16 @@ function landIn(game: Game, band: (x: number, y: number) => boolean): number {
   return n;
 }
 
-async function scenarioGame(map: string, scenario: Scenario): Promise<Game> {
+async function scenarioGame(
+  map: string,
+  scenario: Scenario,
+  humans: PlayerInfo[] = [],
+  sandbox = false,
+): Promise<Game> {
   const game = await setup(
     map,
-    { scenario, nations: "disabled", bots: 0 },
-    [],
+    { scenario, nations: "disabled", bots: 0, sandbox },
+    humans,
     undefined,
     undefined,
     false, // the scenario ends the spawn phase itself
@@ -110,6 +118,37 @@ describe("Scenario", () => {
     expect(ai).toHaveLength(3);
   });
 
+  test("the human plays the picked nation, except in a sandbox", async () => {
+    const me = () => new PlayerInfo("me", PlayerType.Human, "CLIENT01", "me");
+    const nationAIs = (g: Game) =>
+      (g as GameImpl).executions().filter((e) => e instanceof NationExecution);
+    const scenario = { ...bands(16, 16), player: 1 };
+
+    const game = await scenarioGame("half_land_half_ocean", scenario, [me()]);
+    game.executeNextTick();
+    game.executeNextTick();
+    const human = game.player("me");
+    expect(human.numTilesOwned()).toBe(
+      landIn(game, (x, y) => y >= 16 / 3 && y < 32 / 3 && x >= 4),
+    );
+    expect(human.troops()).toBe(12_345);
+    expect(human.gold()).toBe(777n);
+    expect(game.hasPlayer("midland1")).toBe(false);
+    expect(nationAIs(game)).toHaveLength(2);
+
+    const sandbox = await scenarioGame(
+      "half_land_half_ocean",
+      scenario,
+      [me()],
+      true,
+    );
+    sandbox.executeNextTick();
+    sandbox.executeNextTick();
+    expect(sandbox.player("me").numTilesOwned()).toBe(0);
+    expect(sandbox.player("midland1").numTilesOwned()).toBeGreaterThan(0);
+    expect(nationAIs(sandbox)).toHaveLength(3);
+  });
+
   test("a scenario for another map size places nothing", async () => {
     const game = await scenarioGame("plains", bands(16, 16));
     game.executeNextTick();
@@ -140,6 +179,21 @@ describe("Scenario", () => {
   test("snapshots taken before the first tick restore the scenario", async () => {
     const game = await scenarioGame("plains", bands(100, 100));
     await expectSnapshotRoundTrip(game, "plains", 5);
+  });
+
+  test("World 1836 is a valid scenario for the World map", () => {
+    const res = path.join(__dirname, "../../resources");
+    const read = (f: string) =>
+      JSON.parse(fs.readFileSync(path.join(res, f), "utf8"));
+    const s = ScenarioSchema.parse(read("scenarios/world-1836.json"));
+    const { width, height } = read("maps/world/manifest.json").map;
+    expect(s.map).toBe(GameMapType.World);
+    expect(forEachOwnedTile(s.owners, () => {})).toBe(width * height);
+    expect(s.nations.length).toBeGreaterThan(150);
+    for (const n of s.nations) {
+      if (n.flag)
+        expect(fs.existsSync(path.join(res, `flags/${n.flag}.svg`))).toBe(true);
+    }
   });
 
   test("the config accepts a scenario and rejects bad ones", () => {

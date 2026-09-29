@@ -18,6 +18,7 @@ const HASHED_PUBLIC_ASSET_GLOBS = [
   "images/**/*",
   "lang/**/*",
   "maps/**/*",
+  "scenarios/**/*", // Overreach
   "sounds/**/*",
   "sprites/**/*",
 ] as const;

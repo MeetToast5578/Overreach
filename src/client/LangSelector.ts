@@ -245,6 +245,7 @@ export class LangSelector extends LitElement {
   private applyTranslation() {
     const components = [
       "single-player-modal",
+      "scenario-picker", // Overreach
       "host-lobby-modal",
       "map-picker",
       "join-lobby-modal",

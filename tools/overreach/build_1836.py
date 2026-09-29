@@ -1,0 +1,350 @@
+#!/usr/bin/env python3
+"""Builds resources/scenarios/world-1836.json: the world on 1 January 1836 on
+OpenFront's World map (SANDBOX.md F3, ROADMAP.md section 3).
+
+    python tools/overreach/build_1836.py --legacy "../My Map Game/build" \
+        --geojson world_1815.geojson [--preview preview.png]
+
+Inputs outside the repo:
+  --legacy   the old map builder's cache: map8k/ids.npy + nations.json (modern
+             country per pixel), map8k/adm_raw.npy + states.json (admin-1 per
+             pixel), both 7680x3840 equirectangular, and cities15000.zip
+             (GeoNames) for the town checks.
+  --geojson  aourednik/historical-basemaps geojson/world_1815.geojson (GPL-3.0,
+             so the scenario it makes is GPL too).
+
+What 1836 looks like (polity -> nation, rules, checks) is in world1836.py.
+Rules run in order and the last match wins, as ROADMAP.md 3.3 describes.
+"""
+import argparse
+import io
+import json
+import math
+import os
+import sys
+import zipfile
+
+import numpy as np
+from PIL import Image, ImageDraw
+from scipy import ndimage
+from shapely.geometry import shape
+
+import world1836 as data
+
+REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# OpenFront's World map: 2000x1000, equirectangular, 360 degrees wide from
+# 168.25 W, 6.12 px per degree of latitude with the equator at y = 511.5.
+# Fitted against Natural Earth land (92% of tiles agree; within ~0.2 degrees
+# from the Arctic to 55 S). See SANDBOX.md F3.
+W, H = 2000, 1000
+LON0, PX_LON, Y_EQ, PX_LAT = -168.25, 2000 / 360, 511.5, 6.12
+
+# The legacy rasters: 7680x3840, lon -180..180, lat 90..-90.
+LW, LH = 7680, 3840
+LPX = LW / 360
+
+
+def tile_lonlat():
+    x = np.arange(W) + 0.5
+    y = np.arange(H) + 0.5
+    lon = (x / PX_LON + LON0 + 180) % 360 - 180
+    lat = (Y_EQ - y) / PX_LAT
+    return np.broadcast_to(lon, (H, W)), np.broadcast_to(lat[:, None], (H, W))
+
+
+def legacy_index(lon, lat):
+    px = np.clip(((lon + 180) * LPX).astype(int), 0, LW - 1)
+    py = np.clip(((90 - lat) * LPX).astype(int), 0, LH - 1)
+    return py, px
+
+
+def paint_polities(features):
+    """1815 polity index per legacy pixel (0 = none), in file order."""
+    raster = np.zeros((LH, LW), np.uint16)
+    names = [""]
+    for f in features:
+        p = f["properties"]
+        name = (p.get("NAME") or "").strip() or (p.get("SUBJECTO") or "").strip() or "(none)"
+        if name not in names:
+            names.append(name)
+        value = names.index(name)
+        geom = shape(f["geometry"])
+        polys = getattr(geom, "geoms", [geom])
+        for poly in polys:
+            if poly.is_empty:
+                continue
+            rings = [(poly.exterior.coords, 1)] + [(r.coords, 0) for r in poly.interiors]
+            xs, ys = poly.exterior.xy
+            x0 = max(0, int((min(xs) + 180) * LPX) - 1)
+            x1 = min(LW - 1, int(math.ceil((max(xs) + 180) * LPX)) + 1)
+            y0 = max(0, int((90 - max(ys)) * LPX) - 1)
+            y1 = min(LH - 1, int(math.ceil((90 - min(ys)) * LPX)) + 1)
+            if x1 <= x0 or y1 <= y0:
+                continue
+            img = Image.new("L", (x1 - x0 + 1, y1 - y0 + 1), 0)
+            d = ImageDraw.Draw(img)
+            for coords, fill in rings:
+                pts = [((lon + 180) * LPX - x0, (90 - lat) * LPX - y0) for lon, lat in coords]
+                if len(pts) >= 3:
+                    d.polygon(pts, fill=fill)
+            m = np.asarray(img, bool)
+            raster[y0:y1 + 1, x0:x1 + 1][m] = value
+    return raster, names
+
+
+def nearest_fill(values, have, where):
+    """values at `where` tiles copied from the nearest `have` tile."""
+    _, (iy, ix) = ndimage.distance_transform_edt(~have, return_indices=True)
+    out = values.copy()
+    out[where] = values[iy[where], ix[where]]
+    return out
+
+
+class Grid:
+    def __init__(self, args):
+        of = np.fromfile(os.path.join(REPO, "resources/maps/world/map.bin"), np.uint8)
+        of = of.reshape(H, W)
+        self.land = ((of & 0x80) > 0) & ((of & 0x1F) != 31)
+        self.lon, self.lat = tile_lonlat()
+        py, px = legacy_index(self.lon, self.lat)
+
+        cache = os.path.join(args.legacy, "map8k")
+        nations = json.load(open(os.path.join(cache, "nations.json"), encoding="utf-8"))
+        self.a3_id = {a3: i for a3, i in nations["a3"].items()}
+        states = json.load(open(os.path.join(cache, "states.json"), encoding="utf-8"))
+        self.adm_names = {}  # (name, a3) -> ids
+        for s in states:
+            self.adm_names.setdefault((s["name"], s["a3"]), []).append(s["id"])
+        a3 = np.load(os.path.join(cache, "ids.npy"))[py, px].astype(np.int32)
+        adm = np.load(os.path.join(cache, "adm_raw.npy"))[py, px].astype(np.int32)
+
+        geo = json.load(open(args.geojson, encoding="utf-8"))
+        pol8k, self.polity_names = paint_polities(geo["features"])
+        pol = pol8k[py, px].astype(np.int32)
+
+        # The World map's coasts differ from Natural Earth's: its land beyond
+        # theirs takes the nearest values, and polity gaps of up to 3 tiles
+        # (coastline mismatch) the nearest polity.
+        ne = a3 > 0
+        a3 = nearest_fill(a3, ne, self.land & ~ne)
+        adm = nearest_fill(adm, ne & (adm > 0), self.land & (adm == 0))
+        has_pol = pol > 0
+        dist = ndimage.distance_transform_edt(~has_pol)
+        pol = nearest_fill(pol, has_pol, self.land & ~has_pol & (dist <= 3))
+        self.a3, self.adm, self.pol = a3, adm, pol
+
+
+class Sel:
+    """A tile selector for the rules: combine with |, & and ~."""
+
+    def __init__(self, f):
+        self.f = f
+
+    def __call__(self, g):
+        return self.f(g)
+
+    def __or__(self, o):
+        return Sel(lambda g: self(g) | o(g))
+
+    def __and__(self, o):
+        return Sel(lambda g: self(g) & o(g))
+
+    def __invert__(self):
+        return Sel(lambda g: ~self(g))
+
+
+def _ids(table, keys, what):
+    missing = [k for k in keys if k not in table]
+    if missing:
+        raise KeyError(f"unknown {what}: {missing}")
+    return [table[k] for k in keys]
+
+
+def C(*a3s):
+    """Modern countries (Natural Earth ISO3)."""
+    return Sel(lambda g: np.isin(g.a3, _ids(g.a3_id, a3s, "country")))
+
+
+def A(c, *names):
+    """Admin-1 regions of country c (Natural Earth names)."""
+
+    def f(g):
+        ids = [i for key in _ids(g.adm_names, [(n, c) for n in names], "admin-1") for i in key]
+        return np.isin(g.adm, ids)
+
+    return Sel(f)
+
+
+def P(*names):
+    """1815 polities (historical-basemaps NAME, or SUBJECTO when unnamed)."""
+    return Sel(lambda g: np.isin(g.pol, _ids({n: i for i, n in enumerate(g.polity_names)}, names, "polity")))
+
+
+def B(lon0, lat0, lon1, lat1):
+    """A lon/lat box (west, south, east, north)."""
+    return Sel(lambda g: (g.lon >= lon0) & (g.lon < lon1) & (g.lat >= lat0) & (g.lat < lat1))
+
+
+ALL = Sel(lambda g: np.ones((H, W), bool))
+
+
+def assign(g):
+    tags = [None] + list(data.NATIONS)
+    index = {t: i for i, t in enumerate(tags)}
+    index["-"] = 0
+    owner = np.zeros((H, W), np.int32)
+    for name, tag in data.POLITIES.items():
+        owner[P(name)(g) & g.land] = index[tag]
+    for tag, sel in data.RULES(C, A, P, B, ALL):
+        if tag not in index:
+            raise KeyError(f"rule for unknown tag {tag}")
+        owner[sel(g) & g.land] = index[tag]
+    return owner, tags
+
+
+def load_towns(legacy):
+    towns = {}
+    with zipfile.ZipFile(os.path.join(legacy, "cities15000.zip")) as z:
+        with z.open("cities15000.txt") as f:
+            for line in io.TextIOWrapper(f, encoding="utf-8"):
+                c = line.rstrip("\n").split("\t")
+                name, ascii_name, alt, lat, lon, cc, pop = c[1], c[2], c[3], float(c[4]), float(c[5]), c[8], int(c[14])
+                for n in {name, ascii_name, *alt.split(",")}:
+                    key = (n.lower(), cc)
+                    if key not in towns or towns[key][2] < pop:
+                        towns[key] = (lon, lat, pop)
+    return towns
+
+
+def tile_of(lon, lat):
+    x = int(((lon - LON0) % 360) * PX_LON)
+    y = int(Y_EQ - lat * PX_LAT)
+    return min(max(x, 0), W - 1), min(max(y, 0), H - 1)
+
+
+def check_towns(g, owner, tags, towns):
+    failures = []
+    for town, cc, want, *at in data.CHECKS:
+        t = at[0] if at else towns.get((town.lower(), cc))
+        if t is None:
+            failures.append(f"{town} ({cc}): not in GeoNames")
+            continue
+        x, y = tile_of(t[0], t[1])
+        got = None
+        for r in range(0, 4):  # small towns on islands or coasts: nearest land
+            ys, xs = np.mgrid[max(0, y - r):y + r + 1, max(0, x - r):x + r + 1]
+            ok = g.land[ys, xs]
+            if ok.any():
+                d = (ys - y) ** 2 + (xs - x) ** 2
+                d = np.where(ok, d, 1 << 30)
+                i = np.unravel_index(np.argmin(d), d.shape)
+                got = tags[owner[ys[i], xs[i]]] or "-"
+                break
+        if got != want:
+            failures.append(f"{town} ({cc}): {got}, expected {want}")
+    return failures
+
+
+def scenario(owner, tags):
+    present = [t for t in tags[1:] if (owner == tags.index(t)).any()]
+    empty = [t for t in tags[1:] if t not in present]
+    order = {t: i + 1 for i, t in enumerate(present)}
+    remap = np.zeros(len(tags), np.int32)
+    for t, i in order.items():
+        remap[tags.index(t)] = i
+    flat = remap[owner].ravel()
+    change = np.flatnonzero(np.diff(flat)) + 1
+    starts = np.concatenate([[0], change])
+    lengths = np.diff(np.concatenate([starts, [flat.size]]))
+    runs = np.empty(2 * len(starts), np.int64)
+    runs[0::2], runs[1::2] = flat[starts], lengths
+
+    flags = os.path.join(REPO, "resources/flags")
+    nations = []
+    for t in present:
+        name, color, flag = data.NATIONS[t]
+        n = {"id": f"o1836{t}", "name": name, "color": color or palette(t)}
+        if flag and os.path.exists(os.path.join(flags, f"{flag}.svg")):
+            n["flag"] = flag
+        elif flag:
+            print(f"warning: no flag file {flag}.svg for {t}")
+        nations.append(n)
+    alliances = []
+    for group in data.ALLIANCES:
+        members = [order[t] - 1 for t in group if t in order]
+        alliances += [[a, b] for i, a in enumerate(members) for b in members[i + 1:]]
+    return {
+        "version": 1,
+        "map": "World",
+        "mapSize": "Normal",
+        "nations": nations,
+        "alliances": alliances,
+        "owners": runs.tolist(),
+    }, empty
+
+
+def palette(tag):
+    """A stable, muted colour for nations without a chosen one."""
+    h = int.from_bytes(tag.encode(), "big") * 2654435761 % 360
+    s, l = 0.45 + (h % 7) * 0.03, 0.5 + (h % 5) * 0.03
+    c = (1 - abs(2 * l - 1)) * s
+    x = c * (1 - abs((h / 60) % 2 - 1))
+    r, g_, b = [(c, x, 0), (x, c, 0), (0, c, x), (0, x, c), (x, 0, c), (c, 0, x)][h // 60 % 6]
+    m = l - c / 2
+    return "#%02x%02x%02x" % tuple(int(round((v + m) * 255)) for v in (r, g_, b))
+
+
+def preview(path, g, owner, tags, scenario_nations):
+    colors = np.zeros((len(tags), 3), np.uint8)
+    for n in scenario_nations:
+        t = n["id"][5:]
+        colors[tags.index(t)] = [int(n["color"][i:i + 2], 16) for i in (1, 3, 5)]
+    img = np.where(g.land[..., None], np.uint8([200, 190, 160]), np.uint8([40, 70, 110]))
+    owned = owner > 0
+    img[owned] = colors[owner[owned]]
+    edge = np.zeros_like(owned)
+    edge[:, 1:] |= owner[:, 1:] != owner[:, :-1]
+    edge[1:, :] |= owner[1:, :] != owner[:-1, :]
+    img[edge & g.land] = [30, 30, 30]
+    Image.fromarray(img).save(path)
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--legacy", required=True)
+    ap.add_argument("--geojson", required=True)
+    ap.add_argument("--out", default=os.path.join(REPO, "resources/scenarios/world-1836.json"))
+    ap.add_argument("--preview")
+    ap.add_argument("--polities", action="store_true", help="list 1815 polities with their centres and exit")
+    args = ap.parse_args()
+
+    g = Grid(args)
+    if args.polities:
+        for i, name in enumerate(g.polity_names[1:], 1):
+            m = (g.pol == i) & g.land
+            if m.any():
+                print(f"{int(m.sum()):7d}  {g.lon[m].mean():7.1f} {g.lat[m].mean():6.1f}  {name}")
+        return
+
+    owner, tags = assign(g)
+    out, empty = scenario(owner, tags)
+    if empty:
+        print(f"warning: no land for {', '.join(empty)}")
+    failures = check_towns(g, owner, tags, load_towns(args.legacy))
+    owned = int((owner > 0).sum())
+    print(f"{len(out['nations'])} nations, {owned} of {int(g.land.sum())} land tiles owned, "
+          f"{len(out['owners']) // 2} runs, {len(data.CHECKS) - len(failures)}/{len(data.CHECKS)} town checks pass")
+    for f in failures:
+        print("  FAIL", f)
+    if args.preview:
+        preview(args.preview, g, owner, tags, out["nations"])
+    os.makedirs(os.path.dirname(args.out), exist_ok=True)
+    with open(args.out, "w", encoding="utf-8") as f:
+        json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
+    print(f"wrote {args.out} ({os.path.getsize(args.out) // 1024} KB)")
+    sys.exit(1 if failures else 0)
+
+
+if __name__ == "__main__":
+    main()

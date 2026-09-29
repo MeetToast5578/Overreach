@@ -244,6 +244,39 @@ Checked:
 - **Done when:** "World 1836" shows in the map list and starts with 1836 borders, and you sign off Europe, the
   Americas, India and Africa on screen.
 
+**Status (29 Sep 2026): built, waiting for your sign-off on screen.**
+
+- **No terrain export.** World 1836 is a scenario on OpenFront's own World map (2000×1000), whose coasts match
+  Natural Earth on 92% of tiles. Only the owners are ours, so there's no new map folder and no `export_openfront.py`.
+- **Builder:** `tools/overreach/build_1836.py` rasterises the owners; `world1836.py` holds the data (nations, 1815
+  polity → nation, the §3.3 rules, the town checks). Its inputs sit outside the repo: the legacy builder's rasters
+  (`../My Map Game/build`) and historical-basemaps' `world_1815.geojson` (GPL-3.0, so the scenario is GPL too).
+
+  ```bash
+  python tools/overreach/build_1836.py --legacy "../My Map Game/build" --geojson world_1815.geojson --preview out.png
+  ```
+
+  It writes `resources/scenarios/world-1836.json`: 178 nations, 420,571 of 651,569 land tiles owned, 106 KB.
+  136 of 136 town checks pass. Ryukyu, Tahiti, Tonga and Samoa are too small to get a tile at this size.
+- **Where it shows:** Solo, on either tab, has a "World 1836" button above the map list (a scenario, not a new map),
+  next to "Load scenario…".
+- **Picking a nation:** on the Standard tab a "Your nation" list appears (great powers first). You start as that
+  nation, with its land, troops, gold, alliances, name, flag and colour, and its AI stays off. The scenario records the
+  pick as `player` (an index into its nations). The Sandbox tab ignores it, and you start as an observer as before.
+  EU4-style picking on the map is M14.
+- **Checked:**
+  - 8 tests in `tests/overreach/Scenario.test.ts`, 2 of them new: the human plays the picked nation (a sandbox
+    ignores the pick), and the shipped file parses, covers World's 2,000,000 tiles, and every flag it names exists;
+  - in the browser, picking France starts you with France's 2,628 of 2,628 tiles, in its blue, under the Bourbon flag,
+    named France, allied to Britain, Spain and Portugal, with no AI France. The AI is fast: 71 of 178 nations are gone
+    after 33 s (F7 pacing).
+- **Upstream hooks:**
+  - `SinglePlayerModal` shows the scenario picker on both tabs;
+  - `Main.ts` gains `JoinLobbyEvent.playerName`, since your own name on screen comes from the lobby, not the game;
+  - `LangSelector` re-renders the picker once translations load;
+  - `PublicAssetManifest` ships `scenarios/`.
+- **Next:** F4, provinces.
+
 ### F4: Provinces
 
 - **Core** (`src/core/overreach/Provinces.ts`):
