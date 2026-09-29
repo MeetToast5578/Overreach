@@ -9,10 +9,11 @@ import { renderDpr } from "../render/gl/utils/Dpr";
 import { createMapQuad, createProgram } from "../render/gl/utils/GlUtils";
 import { provinceLayer, type ProvinceLayer } from "./ProvinceLayer";
 
-// Province borders and names (Overreach, SANDBOX.md F4), drawn from
-// provinceLayer: thin dark lines between provinces, fading in as you zoom,
-// under the national borders; and each province's name at its centre once
-// it is big enough on screen.
+// Province borders and place names (Overreach, SANDBOX.md F4 and F5), drawn
+// from provinceLayer: thin dark lines between provinces, fading in as you
+// zoom, under the national borders; and names. A province with a town is
+// named at its town, one without at its centre, and other named cities where
+// they stand. Smaller places show as you zoom in.
 
 const borderFragSrc = `#version 300 es
 precision highp float;
@@ -57,8 +58,11 @@ void main() {
 const MIN_ZOOM = 1.5;
 const FULL_ZOOM = 4;
 const BORDER_ALPHA = 0.5;
-// A name shows once its province is this many CSS pixels across.
-const NAME_MIN_PX = 45;
+// A town shows once its population is at least TOWN_POP / zoom² (zoom in
+// CSS pixels per tile): 2M at 2, 125k at 8. A province without a town counts
+// TILE_PEOPLE per tile, so it shows once it's about 45 px across.
+const TOWN_POP = 8_000_000;
+const TILE_PEOPLE = 4_000;
 const MAX_NAMES = 300;
 const CENTROID_EVERY_MS = 1000;
 
@@ -170,8 +174,8 @@ export class ProvincePass {
     m: Float32Array,
     zoom: number,
   ): AttackTroopLabel[] {
-    const minTiles = (NAME_MIN_PX * renderDpr()) / zoom;
-    if (minTiles * minTiles > this.mapW * this.mapH) return [];
+    const css = zoom / renderDpr();
+    const minPop = TOWN_POP / (css * css);
     this.updateCentroids(layer);
     // The visible world: clip space [-1, 1] back through the camera.
     const xs = [(-1 - m[6]) / m[0], (1 - m[6]) / m[0]];
@@ -179,24 +183,33 @@ export class ProvincePass {
     const [x0, x1] = [Math.min(...xs), Math.max(...xs)];
     const [y0, y1] = [Math.min(...ys), Math.max(...ys)];
     const shown: { n: number; label: AttackTroopLabel }[] = [];
+    const add = (x: number, y: number, text: string, n: number) => {
+      if (n < minPop || x < x0 || x > x1 || y < y0 || y > y1) return;
+      const label = { x, y, text, colorR: 0.93, colorG: 0.92, colorB: 0.86 };
+      shown.push({ n, label });
+    };
+    const w = this.mapW;
     for (let id = 1; id < this.count.length; id++) {
-      const n = this.count[id];
       const rec = layer.records[id];
-      if (n < minTiles * minTiles || !rec) continue;
-      const x = this.cx[id] / n;
-      const y = this.cy[id] / n;
-      if (x < x0 || x > x1 || y < y0 || y > y1) continue;
-      shown.push({
-        n,
-        label: {
-          x,
-          y,
-          text: rec.name,
-          colorR: 0.93,
-          colorG: 0.92,
-          colorB: 0.86,
-        },
-      });
+      const tiles = this.count[id];
+      if (!rec || tiles === 0) continue;
+      const people = tiles * TILE_PEOPLE;
+      if (rec.capital === null) {
+        add(this.cx[id] / tiles, this.cy[id] / tiles, rec.name, people);
+      } else {
+        const x = (rec.capital % w) + 0.5;
+        const y = Math.floor(rec.capital / w) + 0.5;
+        add(x, y, rec.name, rec.population || people);
+      }
+    }
+    for (const c of layer.cities.values()) {
+      if (layer.records[layer.province(c.tile)]?.capital === c.tile) continue;
+      add(
+        (c.tile % w) + 0.5,
+        Math.floor(c.tile / w) + 0.5,
+        c.name,
+        c.population,
+      );
     }
     // Biggest first; a name that would overlap one already placed is skipped.
     // Boxes are estimated (WorldTextPass centres attack labels at 17 px).

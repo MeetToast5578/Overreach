@@ -10,11 +10,13 @@ import type {
 } from "../snapshot/SnapshotContext";
 import { zInt, zU16Array } from "../snapshot/SnapshotType";
 import { simpleHash } from "../Util";
+import { Cities } from "./Cities";
 import { generateProvinces, ProvinceRecord, Provinces } from "./Provinces";
 import { forEachOwnedTile, type ScenarioProvinces } from "./Scenario";
 
 // Owns the game's provinces (Provinces.ts): builds them on its first tick,
-// from the current tile owners, and flips provinces every tick after.
+// from the current tile owners, and every tick after names new cities
+// (Cities.ts) and flips provinces.
 // GameRunner adds it to a new game; ScenarioExecution adds it once its
 // nations are placed, so a scenario's borders decide who owns what.
 export class ProvinceExecution implements Execution {
@@ -32,10 +34,12 @@ export class ProvinceExecution implements Execution {
 
   private attach(mg: Game, provinces: Provinces): void {
     this.provinces = provinces;
+    provinces.cities = new Cities(mg, provinces);
     (mg as GameImpl).provinces = provinces;
   }
 
   tick(): void {
+    this.provinces!.cities!.sync();
     this.provinces!.applyFlips();
   }
 
@@ -59,6 +63,7 @@ export class ProvinceExecution implements Execution {
               prov: p.prov,
               records: p.records.map((r) => (r === null ? null : { ...r })),
               pending: [...p.pending],
+              cities: [...p.cities!.records].map(([id, c]) => ({ id, ...c })),
             },
     });
   }
@@ -75,6 +80,9 @@ export class ProvinceExecution implements Execution {
     );
     s.layers.pending.forEach((id) => p.pending.add(id));
     this.attach(r.game, p);
+    for (const { id, ...city } of s.layers.cities) {
+      p.cities!.records.set(id, city);
+    }
   }
 }
 
@@ -98,6 +106,7 @@ function drawnProvinces(
       name,
       owner: 0,
       capital: c !== null && home[c] === i + 1 ? c : null,
+      population: s.populations?.[i] ?? 0,
     });
   });
   return { home, records };
@@ -114,10 +123,20 @@ const ProvinceStateSchema = z.object({
           name: z.string(),
           owner: zInt(),
           capital: zInt().nullable(),
+          population: zInt(),
         })
         .nullable()
         .array(),
       pending: zInt().array(),
+      cities: z
+        .object({
+          id: zInt(),
+          name: z.string(),
+          tile: zInt(),
+          population: zInt(),
+          founded: zInt(),
+        })
+        .array(),
     })
     .nullable(),
 });

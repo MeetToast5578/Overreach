@@ -17,6 +17,7 @@ import type {
   SnapshotReader,
   SnapshotWriter,
 } from "../snapshot/SnapshotContext";
+import { placeCity } from "./Cities";
 import { ProvinceExecution } from "./ProvinceExecution";
 import { forEachOwnedTile } from "./Scenario";
 
@@ -87,6 +88,10 @@ export class ScenarioExecution implements Execution {
         const diff = BigInt(n.gold) - p.gold();
         if (diff > 0n) p.addGold(diff);
         else if (diff < 0n) p.removeGold(-diff);
+      }
+      const c = n.capital;
+      if (c !== undefined && g.isValidRef(c) && g.ownerID(c) === p.smallID()) {
+        placeCity(g, p, c);
       }
       g.addExecution(new PlayerExecution(p));
       if (p === human) return;

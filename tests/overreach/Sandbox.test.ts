@@ -363,6 +363,7 @@ describe("Sandbox", () => {
       name: "Hostland",
       owner: host.smallID(),
       capital: null,
+      population: 0,
     });
     run({
       kind: "province_split",

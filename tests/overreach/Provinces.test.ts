@@ -49,7 +49,7 @@ async function stripes() {
     home[t] = Math.floor(game.x(t) / 10) + 1;
   const records: (ProvinceRecord | null)[] = [null];
   for (let k = 1; k <= 10; k++) {
-    records.push({ name: `P${k}`, owner: 0, capital: null });
+    records.push({ name: `P${k}`, owner: 0, capital: null, population: 0 });
   }
   const provinces = new Provinces(game, home, records);
   (game as GameImpl).provinces = provinces;
@@ -95,6 +95,7 @@ describe("Provinces", () => {
       name: "P2",
       owner: a.smallID(),
       capital: null,
+      population: 0,
     });
     // Its neighbour joins it; losing both ends the new province.
     a.conquer(game.ref(16, 5));
@@ -178,6 +179,7 @@ describe("Provinces", () => {
       name: "Acorn",
       owner: a.smallID(),
       capital: null,
+      population: 0,
     });
     expect(provinces.homeSize(1)).toBe(950);
 
@@ -212,7 +214,7 @@ describe("Provinces", () => {
     expect(next.layer).toBeUndefined();
     expect([...next.tiles!]).toEqual([game.ref(10, 7), 1]);
     expect(next.records).toEqual([
-      [3, { name: "Third", owner: 0, capital: null }],
+      [3, { name: "Third", owner: 0, capital: null, population: 0 }],
     ]);
   });
 
@@ -301,8 +303,8 @@ describe("Provinces", () => {
     const west = game.player("westland").smallID();
     const east = game.player("eastland").smallID();
     expect(provinces.records.slice(1)).toEqual([
-      { name: "West", owner: west, capital: 1010 },
-      { name: "East", owner: east, capital: null },
+      { name: "West", owner: west, capital: 1010, population: 0 },
+      { name: "East", owner: east, capital: null, population: 0 },
     ]);
     // Eastland's strip of West counts in East.
     expect(provinces.province(game.ref(40, 5))).toBe(2);

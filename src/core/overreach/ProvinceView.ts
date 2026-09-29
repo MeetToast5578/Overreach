@@ -1,5 +1,6 @@
 import type { Game } from "../game/Game";
 import type { GameImpl } from "../game/GameImpl";
+import type { CityRecord } from "./Cities";
 import type { ProvinceRecord, Provinces } from "./Provinces";
 
 // What the client needs to draw provinces (GameUpdateViewData.provinces):
@@ -11,6 +12,8 @@ export interface ProvinceViewUpdate {
   tiles?: Uint32Array;
   // Changed records by id; null for a deleted province.
   records?: [number, ProvinceRecord | null][];
+  // Named cities by unit id, new or (null) gone; all of them with a layer.
+  cities?: [number, CityRecord | null][];
 }
 
 export class ProvinceViewTracker {
@@ -44,12 +47,28 @@ export class ProvinceViewTracker {
       const same =
         r === null || s === null
           ? r === s
-          : r.name === s.name && r.owner === s.owner && r.capital === s.capital;
+          : r.name === s.name &&
+            r.owner === s.owner &&
+            r.capital === s.capital &&
+            r.population === s.population;
       if (same) continue;
       this.shadow[i] = r && { ...r };
       records.push([i, r && { ...r }]);
     }
     if (records.length > 0) out.records = records;
-    return out.layer || out.tiles || out.records ? out : undefined;
+
+    const cities = p.cities;
+    if (cities !== null) {
+      const ids = out.layer
+        ? [...cities.records.keys()]
+        : [...cities.clientChanges];
+      cities.clientChanges.clear();
+      if (ids.length > 0) {
+        out.cities = ids.map((id) => [id, cities.records.get(id) ?? null]);
+      }
+    }
+    return out.layer || out.tiles || out.records || out.cities
+      ? out
+      : undefined;
   }
 }

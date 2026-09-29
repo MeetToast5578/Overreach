@@ -1,3 +1,4 @@
+import type { CityRecord } from "../../core/overreach/Cities";
 import type { ProvinceRecord } from "../../core/overreach/Provinces";
 import type { ProvinceViewUpdate } from "../../core/overreach/ProvinceView";
 
@@ -6,6 +7,8 @@ import type { ProvinceViewUpdate } from "../../core/overreach/ProvinceView";
 export class ProvinceLayer {
   readonly prov: Uint16Array;
   readonly records: (ProvinceRecord | null)[] = [];
+  // Named cities by unit id.
+  readonly cities = new Map<number, CityRecord>();
   // Rows changed since ProvincePass last uploaded them (empty when from > to).
   dirtyFrom = 0;
   dirtyTo: number;
@@ -24,6 +27,7 @@ export class ProvinceLayer {
     if (u.layer) {
       this.prov.set(u.layer);
       this.markRows(0, this.height - 1);
+      this.cities.clear();
     }
     if (u.tiles) {
       for (let i = 0; i < u.tiles.length; i += 2) {
@@ -33,6 +37,10 @@ export class ProvinceLayer {
       }
     }
     for (const [id, rec] of u.records ?? []) this.records[id] = rec;
+    for (const [id, city] of u.cities ?? []) {
+      if (city) this.cities.set(id, city);
+      else this.cities.delete(id);
+    }
     this.version++;
   }
 

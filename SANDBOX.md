@@ -258,6 +258,7 @@ Checked:
 
   It writes `resources/scenarios/world-1836.json`: 178 nations, 420,571 of 651,569 land tiles owned, 106 KB.
   136 of 136 town checks pass. Ryukyu, Tahiti, Tonga and Samoa are too small to get a tile at this size.
+
 - **Where it shows:** Solo, on either tab, has a "World 1836" button above the map list (a scenario, not a new map),
   next to "Load scenario…".
 - **Picking a nation:** on the Standard tab a "Your nation" list appears (great powers first). You start as that
@@ -350,6 +351,44 @@ Checked:
 - A found-city intent: free in the sandbox, costs gold in a normal game.
 - Labels by zoom level.
 - **Checks:** founding respects spacing; capturing a province's capital city flips the province (F4 rule).
+
+**Status (29 Sep 2026): done.**
+
+- **Named cities** (`src/core/overreach/Cities.ts`) keep a name, population and founding tick for each City building,
+  by unit id. `ProvinceExecution` names new ones on its next tick:
+  - a city on its province's capital takes the province's town name and population;
+  - a city in its owner's province with no capital becomes that province's capital and takes its name;
+  - any other city gets a made-up name and 5,000 people.
+- **World 1836 places a real City only at each nation's capital** (158 of them: London, Paris, Saint Petersburg,
+  Vienna, Istanbul, Washington, Beijing, Rio and so on). Each City adds 250,000 to its owner's troop cap, against
+  France's whole base of ~325,000, so a City at every town (4,198 of them) would multiply every army. The other
+  towns are named province capitals: they carry the province's name and population, and taking one flips the
+  province.
+- **Capital choice:** each nation's biggest town, or `CAPITALS` in `world1836.py` where that's wrong for 1836 or a
+  colony's (Saint Petersburg, not Moscow; Amsterdam, not Jakarta; Lisbon, not Luanda). Peoples without towns get none.
+  A province's town is the biggest whose tile lies in it, so city districts that vanish at this size (Cairo) still
+  count. `TOWN_AT` moves towns the map's coast misplaces (Copenhagen, Lisbon), for the town checks too. The scenario
+  file is 699 KB.
+- **Populations are today's** (GeoNames). ROADMAP §3.6's 1836 scaling, historical names (Constantinople, Edo) and
+  founding years (so no Johannesburg in 1836) come later.
+- **Founding a city** uses OpenFront's own City build: gold in a normal game, free with the sandbox's Build tool. No
+  new intent was needed.
+- **Labels by zoom:** a town shows once its population is at least 8M ÷ zoom² (2M at zoom 2, 125k at zoom 8). A
+  province without a town counts 4,000 people per tile. Other named cities show where they stand. Biggest first,
+  with no overlaps.
+- **Checked:**
+  - 8 tests in `tests/overreach/Cities.test.ts`:
+    - a city takes its capital's town name and people;
+    - a new city becomes the capital of a province that has none, and a second one gets a made-up name;
+    - a city on another nation's province doesn't become its capital;
+    - destroyed cities are forgotten;
+    - founding respects the 15-tile structure spacing;
+    - taking a capital city takes the province and the City;
+    - World 1836 starts with Paris, Saint Petersburg and London;
+    - snapshots;
+  - in the browser, capital City icons and town names across Europe at three zooms, and France's troop cap up by
+    one City.
+- **Next:** F6, diplomacy additions.
 
 ### F6: Diplomacy additions
 

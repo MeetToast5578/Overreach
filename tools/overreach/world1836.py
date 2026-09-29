@@ -595,6 +595,40 @@ def RULES(C, A, P, B, ALL):
     ]
 
 
+# Capital towns, where the nation's biggest town today (GeoNames) isn't its
+# 1836 capital, or is a colony's. The rest take their biggest; None means no
+# city (peoples without towns). ponytail: many small nations' biggest town is
+# modern (Johannesburg, Lilongwe) until ROADMAP 3.6's names and founding years.
+CAPITALS = {
+    "MEX": "Mexico City",
+    "MOR": "Fes",
+    "HAN": "Hannover",
+    "EGY": "Cairo",
+    "ASH": "Kumasi",
+    "COM": None,
+    "LAK": None,
+    "SEM": None,
+    "MAP": None,
+    "RUS": "Saint Petersburg",
+    "USA": "Washington",
+    "QNG": "Beijing",
+    "BRZ": "Rio de Janeiro",
+    "EIC": "Kolkata",
+    "GBR": "London",
+    "NED": "Amsterdam",
+    "SPA": "Madrid",
+    "POR": "Lisbon",
+    "OMA": "Muscat",
+    "SWI": "Bern",
+    "AUS": "Vienna",
+    "DEN": "Copenhagen",
+    "SAX": "Dresden",
+    "BAD": "Karlsruhe",
+    "SER": "Kragujevac",
+    "FRA": "Paris",
+    "OTT": "Istanbul",
+}
+
 # The Holy Alliance, the Quadruple Alliance, and the unions and vassals the
 # engine can't show yet (SANDBOX.md F6) as alliances.
 ALLIANCES = [
@@ -625,10 +659,12 @@ ALLIANCES = [
     ("SIA", "TRE"),
 ]
 
-# (town, GeoNames country code, owner[, (lon, lat)]): ROADMAP.md 3.3 plus
-# capitals. The optional position overrides GeoNames where the World map's
-# coast is off (it draws Zealand's east shore ~0.3 degrees west, so the real
-# Copenhagen is in the sea next to Sweden).
+# Town positions (lon, lat) where the World map's coast is off: it draws
+# Zealand's east shore ~0.3 degrees west, so the real Copenhagen is in the sea
+# next to Sweden. Lisbon's own tile is its neighbour's.
+TOWN_AT = {"Copenhagen": (12.3, 55.68), "Lisbon": (-9.0, 38.76)}
+
+# (town, GeoNames country code, owner): ROADMAP.md 3.3 plus capitals.
 CHECKS = [
     ("Istanbul", "TR", "OTT"), ("Warsaw", "PL", "POL"), ("Kraków", "PL", "KRA"), ("Poznań", "PL", "PRU"),
     ("Lviv", "UA", "AUS"), ("Milan", "IT", "AUS"), ("Turin", "IT", "SAR"), ("Nice", "FR", "SAR"),
@@ -649,7 +685,7 @@ CHECKS = [
     # Capitals and more
     ("London", "GB", "GBR"), ("Paris", "FR", "FRA"), ("Vienna", "AT", "AUS"), ("Berlin", "DE", "PRU"),
     ("Munich", "DE", "BAV"), ("Dresden", "DE", "SAX"), ("Hanover", "DE", "HAN"), ("Stuttgart", "DE", "WUR"),
-    ("Madrid", "ES", "SPA"), ("Lisbon", "PT", "POR"), ("Amsterdam", "NL", "NED"), ("Copenhagen", "DK", "DEN", (12.3, 55.68)),
+    ("Madrid", "ES", "SPA"), ("Lisbon", "PT", "POR"), ("Amsterdam", "NL", "NED"), ("Copenhagen", "DK", "DEN"),
     ("Stockholm", "SE", "SWE"), ("Moscow", "RU", "RUS"), ("Saint Petersburg", "RU", "RUS"),
     ("Beijing", "CN", "QNG"), ("Tokyo", "JP", "JAP"), ("Tehran", "IR", "PRS"), ("Mexico City", "MX", "MEX"),
     ("New York City", "US", "USA"), ("Rio de Janeiro", "BR", "BRZ"), ("Buenos Aires", "AR", "ARG"),

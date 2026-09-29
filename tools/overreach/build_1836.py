@@ -223,24 +223,30 @@ def tile_of(lon, lat):
     return min(max(x, 0), W - 1), min(max(y, 0), H - 1)
 
 
+def town_tile(g, name, lon, lat):
+    """A town's tile: the nearest land within 3 tiles (towns on small islands
+    or coasts), or None. data.TOWN_AT moves towns the map's coast misplaces."""
+    lon, lat = data.TOWN_AT.get(name, (lon, lat))
+    x, y = tile_of(lon, lat)
+    for r in range(0, 4):
+        ys, xs = np.mgrid[max(0, y - r):y + r + 1, max(0, x - r):x + r + 1]
+        ok = g.land[ys, xs]
+        if ok.any():
+            d = np.where(ok, (ys - y) ** 2 + (xs - x) ** 2, 1 << 30)
+            i = np.unravel_index(np.argmin(d), d.shape)
+            return int(xs[i]), int(ys[i])
+    return None
+
+
 def check_towns(g, owner, tags, towns):
     failures = []
-    for town, cc, want, *at in data.CHECKS:
-        t = at[0] if at else towns.get((town.lower(), cc))
+    for town, cc, want in data.CHECKS:
+        t = towns.get((town.lower(), cc))
         if t is None:
             failures.append(f"{town} ({cc}): not in GeoNames")
             continue
-        x, y = tile_of(t[0], t[1])
-        got = None
-        for r in range(0, 4):  # small towns on islands or coasts: nearest land
-            ys, xs = np.mgrid[max(0, y - r):y + r + 1, max(0, x - r):x + r + 1]
-            ok = g.land[ys, xs]
-            if ok.any():
-                d = (ys - y) ** 2 + (xs - x) ** 2
-                d = np.where(ok, d, 1 << 30)
-                i = np.unravel_index(np.argmin(d), d.shape)
-                got = tags[owner[ys[i], xs[i]]] or "-"
-                break
+        at = town_tile(g, town, t[0], t[1])
+        got = None if at is None else tags[owner[at[1], at[0]]] or "-"
         if got != want:
             failures.append(f"{town} ({cc}): {got}, expected {want}")
     return failures
@@ -336,17 +342,48 @@ def provinces(args, g, owner):
     records = json.load(open(os.path.join(cache, "provinces.json"), encoding="utf-8"))
     subs = {s["id"]: s["name"] for s in records["subregions"]}
     legacy = {p["id"]: p for p in records["provinces"]}
-    names, capitals = [], []
-    for i, pc in enumerate(ids[1:], 1):
-        rec = legacy[int(legacy_of[pc])]
-        city, capital = rec["city"], None
-        if city:
-            x, y = tile_of(city["lon"], city["lat"])
-            if home[y, x] == i:
-                capital = y * W + x
-        names.append(city["name"] if capital is not None else subs.get(rec["sub"], f"Province {i}"))
-        capitals.append(capital)
-    return {"names": names, "capitals": capitals, "home": runs_of(home)}, home
+    # A province's town is the biggest whose tile lies in it, from any legacy
+    # province (small ones, like Cairo's, vanish or merge at this size); a
+    # nation's capital (data.CAPITALS) beats any size.
+    rank = lambda c: (c["name"] in data.CAPITALS.values(), c["pop"])
+    towns = {}
+    for rec in records["provinces"]:
+        city = rec["city"]
+        at = city and town_tile(g, city["name"], city["lon"], city["lat"])
+        i = home[at[1], at[0]] if at else 0
+        if i and (i not in towns or rank(city) > rank(towns[i][0])):
+            towns[i] = (city, at)
+    names, capitals, populations = [], [], []
+    for i, root_pc in enumerate(ids[1:], 1):
+        best = towns.get(i)
+        sub = legacy[int(legacy_of[root_pc])]["sub"]
+        names.append(best[0]["name"] if best else subs.get(sub, f"Province {i}"))
+        capitals.append(best[1][1] * W + best[1][0] if best else None)
+        # ponytail: today's GeoNames population; ROADMAP 3.6 scales it to 1836.
+        populations.append(best[0]["pop"] if best else 0)
+    return {"names": names, "capitals": capitals, "populations": populations, "home": runs_of(home)}, home
+
+
+def nation_capitals(out, owner, tags):
+    """Each nation's capital town, where it starts with a City: CAPITALS
+    names it, else its biggest town."""
+    prov = out["provinces"]
+    towns = {}
+    for name, cap, pop in zip(prov["names"], prov["capitals"], prov["populations"]):
+        if cap is not None and tags[owner.flat[cap]]:
+            towns.setdefault(tags[owner.flat[cap]], []).append((name, cap, pop))
+    for n in out["nations"]:
+        tag = n["id"][5:]
+        mine = towns.get(tag)
+        if not mine:
+            continue
+        want = data.CAPITALS.get(tag)
+        if tag in data.CAPITALS and want is None:
+            continue
+        pick = next((t for t in mine if t[0] == want), None)
+        if want and pick is None:
+            print(f"warning: no town {want} for {tag}'s capital")
+        n["capital"] = (pick or max(mine, key=lambda t: t[2]))[1]
 
 
 def palette(tag):
@@ -404,6 +441,7 @@ def main():
     for f in failures:
         print("  FAIL", f)
     out["provinces"], home = provinces(args, g, owner)
+    nation_capitals(out, owner, tags)
     print(f"{len(out['provinces']['names'])} provinces, "
           f"{sum(c is not None for c in out['provinces']['capitals'])} with a capital town")
     if args.preview:

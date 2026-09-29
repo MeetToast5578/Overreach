@@ -25,6 +25,8 @@ export const ScenarioNationSchema = z.object({
   // Omitted: half the nation's troop limit.
   troops: z.number().min(0).max(MAX_TROOPS).optional(),
   gold: z.number().int().min(0).max(MAX_GOLD).optional(),
+  // A tile of the nation's where it starts with a City (its capital).
+  capital: z.number().int().nonnegative().optional(),
 });
 export type ScenarioNation = z.infer<typeof ScenarioNationSchema>;
 
@@ -33,6 +35,8 @@ export type ScenarioNation = z.infer<typeof ScenarioNationSchema>;
 export const ScenarioProvincesSchema = z.object({
   names: z.string().max(80).array().max(MAX_PROVINCES),
   capitals: z.number().int().nonnegative().nullable().array(),
+  // Each province's town population (a city there starts with it).
+  populations: z.number().int().nonnegative().array().optional(),
   // Every tile's home province (0 for none) as runs, like `owners`.
   home: z.number().int().nonnegative().array(),
 });

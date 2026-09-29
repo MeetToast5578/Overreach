@@ -1,6 +1,7 @@
 import type { Game } from "../game/Game";
 import type { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
+import type { Cities } from "./Cities";
 
 // Provinces (Overreach, SANDBOX.md F4). Every land tile has a home province
 // (its geography, which only sandbox edits change) and a current province,
@@ -22,6 +23,8 @@ export interface ProvinceRecord {
   name: string;
   owner: number; // small id, 0 for nobody
   capital: TileRef | null;
+  // Its town's people (0 if unknown); a city there starts with them.
+  population: number;
 }
 
 interface ProvinceIndex {
@@ -44,6 +47,8 @@ export class Provinces {
   // on overflow the client gets the whole layer instead. Not saved.
   clientChanges: TileRef[] = [];
   clientOverflow = false;
+  // Named cities (Cities.ts), set by ProvinceExecution.
+  cities: Cities | null = null;
 
   /**
    * `records[0]` is unused, and so is any slot freed by a new province that
@@ -141,7 +146,7 @@ export class Provinces {
 
   /** A new province of these tiles, owned by whoever holds most of them. */
   create(tiles: TileRef[], name: string): number {
-    const p = this.newRecord({ name, owner: 0, capital: null });
+    const p = this.newRecord({ name, owner: 0, capital: null, population: 0 });
     if (p === 0) return 0;
     this.setHome(tiles, p);
     if (this.homeSize(p) > 0) return p;
@@ -342,7 +347,8 @@ export class Provinces {
     const name = home?.name ?? (player.isPlayer() ? player.name() : "");
     // ponytail: 65,535 ids; past that a loose tile stays at home, breaking
     // the owner rule. Recycle harder if a game ever gets there.
-    return this.newRecord({ name, owner, capital: null }) || this.home[t];
+    const rec = { name, owner, capital: null, population: 0 };
+    return this.newRecord(rec) || this.home[t];
   }
 
   // A free id for rec, or 0 when all 65,535 are taken.
@@ -476,7 +482,12 @@ export function generateProvinces(
       return false;
     }
     home[t] = records.length;
-    records.push({ name: provinceName(rand), owner: 0, capital: null });
+    records.push({
+      name: madeUpName(rand),
+      owner: 0,
+      capital: null,
+      population: 0,
+    });
     queue[tail++] = t;
     return true;
   };
@@ -529,7 +540,8 @@ const ONSETS = [
 const VOWELS = ["a", "e", "i", "o", "u", "a", "e", "ia", "ou"];
 const CODAS = ["", "", "", "n", "r", "s", "l", "nd", "rk", "th"];
 
-function provinceName(rand: PseudoRandom): string {
+/** A made-up place name ("Varona"), for provinces and cities. */
+export function madeUpName(rand: PseudoRandom): string {
   const syllables = rand.nextInt(2, 4);
   let s = "";
   for (let i = 0; i < syllables; i++) {
