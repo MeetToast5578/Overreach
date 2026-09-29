@@ -1,5 +1,6 @@
 import type { GameEvent } from "../../core/EventBus";
 import type { PlayerID } from "../../core/game/Game";
+import type { OverreachAction } from "../../core/overreach/OverreachIntent";
 import {
   SANDBOX_AS_TYPES,
   type SandboxAction,
@@ -9,6 +10,11 @@ import type { Intent } from "../../core/Schemas";
 // Transport sends this as a "sandbox" intent.
 export class SendSandboxIntentEvent implements GameEvent {
   constructor(public readonly action: SandboxAction) {}
+}
+
+// Transport sends this as an "overreach" intent: a player's own decision.
+export class SendOverreachIntentEvent implements GameEvent {
+  constructor(public readonly action: OverreachAction) {}
 }
 
 // LocalServer runs one turn while paused.

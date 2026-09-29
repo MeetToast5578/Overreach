@@ -362,9 +362,23 @@ def provinces(args, g, owner):
         sub = legacy[int(legacy_of[root_pc])]["sub"]
         names.append(best[0]["name"] if best else subs.get(sub, f"Province {i}"))
         capitals.append(best[1][1] * W + best[1][0] if best else None)
-        # ponytail: today's GeoNames population; ROADMAP 3.6 scales it to 1836.
-        populations.append(best[0]["pop"] if best else 0)
-    return {"names": names, "capitals": capitals, "populations": populations, "home": runs_of(home)}, home
+        # 1836 people: today's (GeoNames) times 1836's share of today's world,
+        # ~1.1 of 8 billion; the calendar grows them 1% a year back to about
+        # today's by 2036. ponytail: one factor for the world; ROADMAP 3.6
+        # scales each country to its own 1836 total.
+        populations.append(best[0]["pop"] * 137 // 1000 if best else 0)
+    # Each province's modern country (most of its tiles), the homelands of
+    # formable nations (Formables.ts): Germany is the provinces in DEU.
+    vals, counts = np.unique((home.astype(np.int64) * 1024 + g.a3)[home > 0], return_counts=True)
+    most = {}
+    for v, c in zip(vals.tolist(), counts.tolist()):
+        pid, a = divmod(v, 1024)
+        if c > most.get(pid, (0, 0))[0]:
+            most[pid] = (c, a)
+    code = {i: a3 for a3, i in g.a3_id.items()}
+    countries = [code.get(most[i][1], "") if i in most else "" for i in range(1, len(names) + 1)]
+    return {"names": names, "capitals": capitals, "populations": populations,
+            "countries": countries, "home": runs_of(home)}, home
 
 
 def nation_capitals(out, owner, tags):

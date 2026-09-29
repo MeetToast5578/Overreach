@@ -29,6 +29,7 @@ import { TribeSpawner } from "./TribeSpawner";
 import { UpgradeStructureExecution } from "./UpgradeStructureExecution";
 import { PlayerSpawner } from "./utils/PlayerSpawner";
 
+import { OverreachExecution } from "../overreach/OverreachIntent";
 import { sandboxExec } from "../overreach/SandboxExecution";
 
 export class Executor {
@@ -144,6 +145,8 @@ export class Executor {
         return new PauseExecution(player, intent.paused);
       case "sandbox":
         return sandboxExec(this, this.mg, this.gameID_, player, intent);
+      case "overreach": // a player's own decisions, checked when they run
+        return new OverreachExecution(player, intent.action);
       default:
         throw new Error(`intent type ${intent} not found`);
     }

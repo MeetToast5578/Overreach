@@ -49,6 +49,7 @@ import { showInGameConfirm } from "./InGameModal";
 import { LocalServer } from "./LocalServer";
 import {
   routeSandboxIntent,
+  SendOverreachIntentEvent,
   SendSandboxIntentEvent,
 } from "./overreach/SandboxEvents";
 import { describeSocketClose } from "./SocketClose";
@@ -332,6 +333,9 @@ export class Transport {
     this.subscribe(PauseGameIntentEvent, (e) => this.onPauseGameIntent(e));
     this.subscribe(SendSandboxIntentEvent, (e) =>
       this.sendIntent({ type: "sandbox", action: e.action }),
+    );
+    this.subscribe(SendOverreachIntentEvent, (e) =>
+      this.sendIntent({ type: "overreach", action: e.action }),
     );
     this.subscribe(SendWinnerEvent, (e) => this.onSendWinnerEvent(e));
     this.subscribe(SendLiveStatsEvent, (e) => this.onSendLiveStatsEvent(e));

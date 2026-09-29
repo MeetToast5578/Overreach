@@ -3,6 +3,7 @@ import type { GameImpl } from "../game/GameImpl";
 import type { CityRecord } from "./Cities";
 import type { Subject } from "./Diplomacy";
 import type { Ending } from "./Endings";
+import type { Pending } from "./Events";
 import type { ProvinceRecord, Provinces } from "./Provinces";
 
 // What the client needs to draw provinces (GameUpdateViewData.provinces):
@@ -20,6 +21,9 @@ export interface ProvinceViewUpdate {
   subjects?: Subject[];
   // How the game ended (Endings.ts), once.
   ending?: Ending;
+  // Formables formed and events awaiting an answer, when either changed.
+  formed?: string[];
+  events?: Pending[];
 }
 
 export class ProvinceViewTracker {
@@ -27,6 +31,7 @@ export class ProvinceViewTracker {
   private shadow: (ProvinceRecord | null)[] = [];
   private subjectsSent = "";
   private endingSent = false;
+  private storySent = "";
 
   next(game: Game): ProvinceViewUpdate | undefined {
     const out: ProvinceViewUpdate = {};
@@ -35,8 +40,16 @@ export class ProvinceViewTracker {
       this.endingSent = true;
       out.ending = { ...ending };
     }
+    const formed = [...((game as GameImpl).diplomacy?.formed ?? [])];
+    const events = (game as GameImpl).events?.pending ?? [];
+    const story = JSON.stringify([formed, events]);
+    if (story !== this.storySent) {
+      this.storySent = story;
+      out.formed = formed;
+      out.events = events.map((q) => ({ ...q }));
+    }
     const p = (game as GameImpl).provinces;
-    if (p === undefined) return out.ending ? out : undefined;
+    if (p === undefined) return Object.keys(out).length > 0 ? out : undefined;
     if (p !== this.sent || p.clientOverflow) {
       this.sent = p;
       this.shadow = [];

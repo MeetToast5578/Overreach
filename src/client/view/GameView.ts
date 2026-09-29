@@ -31,6 +31,7 @@ import { ClientID, GameID, Player, PlayerCosmetics } from "../../core/Schemas";
 import { formatPlayerDisplayName } from "../../core/Util";
 import { WorkerClient } from "../../core/worker/WorkerClient";
 import { provinceLayer, startProvinceLayer } from "../overreach/ProvinceLayer";
+import { applyRename } from "../overreach/Renames";
 import { computeAllianceClusters } from "../render/frame/derive/AllianceClusters";
 import { extractAttackRings } from "../render/frame/derive/AttackRings";
 import { extractNukeTelegraphs } from "../render/frame/derive/NukeTelegraphs";
@@ -382,6 +383,7 @@ export class GameView implements GameMap {
 
       if (existing !== undefined) {
         existing.applyUpdate(pu);
+        if (applyRename(existing, pu)) this._namesDirty = true; // Overreach
         const nextNameData = gu.playerNameViewData?.[pu.id];
         if (nextNameData !== undefined) {
           existing.nameData = nextNameData;

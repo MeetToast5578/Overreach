@@ -141,6 +141,11 @@ export function authorizeIntent(
       }
       return null;
 
+    case "overreach":
+      // Overreach: a player's own decisions (forming a nation, answering an
+      // event), checked against the game when they run.
+      return null;
+
     case "sandbox":
       // Overreach: god-mode edits are the host's, and never in public games.
       // SandboxExecution also requires the sandbox game config.

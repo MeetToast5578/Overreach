@@ -457,6 +457,54 @@ Checked:
 - Province economy, events, decisions and formable nations, from `ROADMAP.md` M8–M13, adapted.
 - The endings from `legacy/HANDOFF.md` §2.
 
+**Status (29 Sep 2026): a first pass of each part is done. The bigger EU4 systems (government, trade goods, religion,
+technology, the German Confederation) are still to come.**
+
+- **Calendar** (`Calendar.ts`): a scenario with a start year runs a year a minute (600 ticks), so 1836 → 2036 takes
+  about 3 h 20 min. A date bar sits top centre. World 1836 starts in 1836.
+- **Eras unlock units:**
+  - railways (1850): factories and trains;
+  - atomic (1945): silos and atom bombs; hydrogen bombs in 1952, SAMs in 1955, MIRVs in 1970;
+  - a sandbox has everything;
+  - one hook, `Config.eraLocked`, which `isUnitDisabled` asks, so the AI, construction, `canBuild` and the build
+    menu all obey it. The worker and the client compute it from the same tick.
+- **Economy** (`Economy.ts`):
+  - towns start at 1836 size (today's GeoNames × 0.137, ~1.1 of 8 billion; one factor for the world for now) and
+    grow 1% a year, back to about today's by 2036;
+  - a nation earns 1 gold per tick per 50,000 of its provinces' people, half from provinces that aren't its core
+    yet, on top of OpenFront's 100 a tick.
+- **Events** (`Events.ts`): eight crises, each firing once in its years, and only if the world still fits:
+  - the Opium War, the Texas annexation, the Mexican War, 1848 in France, the Crimean War, the serfs'
+    emancipation, the Meiji Restoration, the Great Game;
+  - effects are war (hostility and a target), tribute, troops, town growth, peaceful annexation and alliances;
+  - the AI picks by weight. A human gets a card under the date and answers through the new "overreach" intent, or
+    gets the first option after a minute.
+- **Formable nations** (`Formables.ts`): Germany, Italy, Romania and Yugoslavia, with homelands from each province's
+  modern country (the builder now exports it).
+  - A nation may form one once it holds 70% of the homeland and at least half its own land lies there. Without the
+    second rule, Austria formed Yugoslavia in two minutes and the Papal States formed Germany.
+  - The AI forms at once; a human gets a "Form Germany" button.
+  - Forming renames the nation in place (its PlayerInfo, so snapshots keep it) with a new flag and colour, and its
+    homeland becomes core. Three client hooks carry the rename: `GameView`, `WebGLFrameBuilder` and `Transport`.
+- **Endings** (`Endings.ts`), outside a sandbox:
+  - domination: 80% of the land with subjects;
+  - monopoly: 75% of a year's trade gold;
+  - world peace: one alliance web and ten years without war;
+  - nuclear winter: fallout on 10% of the land;
+  - survival: 2036;
+  - they replace OpenFront's win check in calendar games, since its 170-minute limit would end the game around 2006. One line in `WinModal` shows the ending's title.
+- **Checked:**
+  - 19 new tests in `tests/overreach` (82 there in all): `Calendar` 4, `Endings` 6, `EndingTitle` 1, `Story` 8;
+  - a 10-year World 1836 run: the Opium War fired, and no one formed anything spurious;
+  - in the browser: the date bar, silos and factories locked in 1836, and as Qing the Opium Crisis card on 9 January
+    1839, where letting the trade go on paid Britain a quarter of the gold.
+- **Not yet:**
+  - AI pacing: the AI still goes to war at once. 71 of 178 nations are gone after 5 minutes, with coalitions and
+    revolts doing what they can;
+  - M8's government and stability, M11's era units (an 1836 army still fights like a 1950 one), M12's trade goods,
+    and more events and formables;
+  - population scaled per country (ROADMAP §3.6) and historical town names.
+
 ### F8: Hosting
 
 - **Single-player and sandbox:** a static build (the client plus `LocalServer`) can go on any static host:

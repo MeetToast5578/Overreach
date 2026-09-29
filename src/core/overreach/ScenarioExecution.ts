@@ -113,7 +113,8 @@ export class ScenarioExecution implements Execution {
       }
     }
     g.endSpawnPhase();
-    if (s.startYear !== undefined) g.addExecution(new CalendarExecution());
+    if (s.startYear !== undefined)
+      g.addExecution(new CalendarExecution(this.gameID));
     if (g.config().gameConfig().provinces !== false) {
       g.addExecution(
         new ProvinceExecution(this.gameID),

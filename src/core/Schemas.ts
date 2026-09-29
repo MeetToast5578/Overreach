@@ -23,6 +23,10 @@ import {
   Trios,
   UnitType,
 } from "./game/Game";
+import {
+  OverreachIntent,
+  OverreachIntentSchema,
+} from "./overreach/OverreachIntent";
 import { SandboxIntent, SandboxIntentSchema } from "./overreach/Sandbox";
 import { ScenarioSchema } from "./overreach/Scenario";
 import { ArchivedPlayerStatsSchema, PlayerStatsSchema } from "./StatsSchemas";
@@ -57,7 +61,8 @@ export type Intent =
   | TogglePauseIntent
   | UpdateGameConfigIntent
   | ToggleGameStartTimer
-  | SandboxIntent;
+  | SandboxIntent
+  | OverreachIntent;
 
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
@@ -851,6 +856,7 @@ export const IntentSchema = z.discriminatedUnion("type", [
   UpdateGameConfigIntentSchema,
   ToggleGameStartTimerIntentSchema,
   SandboxIntentSchema,
+  OverreachIntentSchema,
 ]);
 
 // StampedIntent = Intent with server-stamped clientID (used in turns and execution)

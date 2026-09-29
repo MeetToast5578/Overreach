@@ -37,6 +37,8 @@ export const ScenarioProvincesSchema = z.object({
   capitals: z.number().int().nonnegative().nullable().array(),
   // Each province's town population (a city there starts with it).
   populations: z.number().int().nonnegative().array().optional(),
+  // Each province's modern country (ISO3), for formable nations' homelands.
+  countries: z.string().max(3).array().optional(),
   // Every tile's home province (0 for none) as runs, like `owners`.
   home: z.number().int().nonnegative().array(),
 });

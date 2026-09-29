@@ -1,6 +1,7 @@
 import type { CityRecord } from "../../core/overreach/Cities";
 import type { Subject } from "../../core/overreach/Diplomacy";
 import type { Ending } from "../../core/overreach/Endings";
+import type { Pending } from "../../core/overreach/Events";
 import type { ProvinceRecord } from "../../core/overreach/Provinces";
 import type { ProvinceViewUpdate } from "../../core/overreach/ProvinceView";
 
@@ -13,6 +14,8 @@ export class ProvinceLayer {
   readonly cities = new Map<number, CityRecord>();
   subjects: Subject[] = [];
   ending: Ending | null = null;
+  formed = new Set<string>();
+  events: Pending[] = [];
   // Rows changed since ProvincePass last uploaded them (empty when from > to).
   dirtyFrom = 0;
   dirtyTo: number;
@@ -47,6 +50,8 @@ export class ProvinceLayer {
     }
     if (u.subjects) this.subjects = u.subjects;
     if (u.ending) this.ending = u.ending;
+    if (u.formed) this.formed = new Set(u.formed);
+    if (u.events) this.events = u.events;
     this.version++;
   }
 

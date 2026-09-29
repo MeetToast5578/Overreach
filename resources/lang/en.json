@@ -770,6 +770,40 @@
     },
     "turnstile_error": "Verification error: {code}. Please refresh and try again."
   },
+  "event": {
+    "crimean_war_0": "Press the Ottomans (Britain and France will side with them)",
+    "crimean_war_1": "Back down (a tenth of our troops leave)",
+    "crimean_war_text": "The Ottoman Empire is weak, and the Holy Places are in dispute.",
+    "crimean_war_title": "The Eastern Question",
+    "great_game_0": "Take Afghanistan first",
+    "great_game_1": "Leave it as a buffer",
+    "great_game_text": "Russian armies close in on Central Asia. Afghanistan stands between Russia and India.",
+    "great_game_title": "The Great Game",
+    "meiji_restoration_0": "Restore the emperor and modernise",
+    "meiji_restoration_1": "Keep the old order",
+    "meiji_restoration_text": "The shogunate has fallen. The young emperor's ministers want to remake Japan.",
+    "meiji_restoration_title": "The Meiji Restoration",
+    "mexican_war_0": "War with Mexico",
+    "mexican_war_1": "Offer to buy the land (a fifth of our gold)",
+    "mexican_war_text": "Settlers push west into Mexican California and New Mexico.",
+    "mexican_war_title": "The Mexican Question",
+    "opium_war_0": "Ban the trade (Britain will go to war)",
+    "opium_war_1": "Let it go on (pay Britain a quarter of our gold)",
+    "opium_war_text": "British merchants flood Canton with Indian opium, and silver drains out of the empire.",
+    "opium_war_title": "The Opium Crisis",
+    "revolutions_1848_0": "Crush the revolt (lose a third of our troops)",
+    "revolutions_1848_1": "Grant a republic and a constitution (spend a fifth of our gold)",
+    "revolutions_1848_text": "Barricades rise in Paris. The people demand a republic.",
+    "revolutions_1848_title": "The Revolutions of 1848",
+    "serf_emancipation_0": "Free the serfs (our towns grow)",
+    "serf_emancipation_1": "Keep serfdom (unrest costs troops)",
+    "serf_emancipation_text": "Defeat has shown that an army of serfs cannot win a modern war.",
+    "serf_emancipation_title": "The Serf Question",
+    "texas_annexation_0": "Annex Texas",
+    "texas_annexation_1": "Leave Texas independent",
+    "texas_annexation_text": "The Republic of Texas asks to join the Union.",
+    "texas_annexation_title": "Texas Asks to Join"
+  },
   "events_display": {
     "about_to_expire": "Your alliance with {name} is about to expire!",
     "accept_alliance": "Accept",
@@ -2130,6 +2164,9 @@
     "tribes_purchase_description": "Your name gets assigned to a bot tribe in real multiplayer games. It goes live right away.",
     "tribes_purchase_heading": "Buy a Tribe Name",
     "your_tribes_heading": "Your Tribe Names"
+  },
+  "story": {
+    "form": "Form {name}"
   },
   "streaming_now": {
     "live_count": "{count} Streaming",

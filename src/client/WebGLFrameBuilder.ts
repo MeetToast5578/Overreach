@@ -16,6 +16,7 @@ import {
 import { PlayerType } from "../core/game/Game";
 import { decodePatternData } from "../core/PatternDecoder";
 import { getCachedCosmetics } from "./Cosmetics";
+import { takeRenames } from "./overreach/Renames";
 import { buildTerrainRowSpans } from "./render/frame/derive/TerrainRowSpans";
 import { uploadFrameData } from "./render/frame/Upload";
 // Type-only: a value import would pull GPURenderer and its `.glsl?raw` shader
@@ -295,6 +296,7 @@ export class WebGLFrameBuilder {
   private glowRescanTick = 0;
 
   update(gameView: GameView): void {
+    if (takeRenames()) this.refreshCosmetics(gameView); // Overreach
     this.syncPlayers(gameView);
     this.syncPlayerEffects(gameView);
     this.syncPlayerSpawns(gameView);

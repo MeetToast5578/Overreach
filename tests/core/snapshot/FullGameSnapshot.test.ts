@@ -176,6 +176,8 @@ describe.each(VARIANTS)("full game snapshots: %s", (_, overrides) => {
       // OverreachProvinces and OverreachDiplomacy are off in this variant;
       // the other two restore them. OverreachCalendar only runs in scenario
       // games with a start year; tests/overreach/Calendar.test.ts has it.
+      // OverreachAction is a player's own decision, which this scripted game
+      // never makes; tests/overreach/Story.test.ts round-trips one.
       const neverStored = new Set([
         "Pause",
         "OverreachSandbox",
@@ -183,6 +185,7 @@ describe.each(VARIANTS)("full game snapshots: %s", (_, overrides) => {
         "OverreachProvinces",
         "OverreachDiplomacy",
         "OverreachCalendar",
+        "OverreachAction",
       ]);
       const missing = EXECUTION_SNAPSHOT_TYPES.map((t) => t.name).filter(
         (name) => !reference.execTypes.has(name) && !neverStored.has(name),

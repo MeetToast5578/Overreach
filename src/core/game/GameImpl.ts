@@ -8,6 +8,7 @@ import {
 } from "../execution/nation/SharedWaterCache";
 import type { Diplomacy } from "../overreach/Diplomacy";
 import type { Ending } from "../overreach/Endings";
+import type { Events } from "../overreach/Events";
 import type { Provinces } from "../overreach/Provinces";
 import { AbstractGraph } from "../pathfinding/algorithms/AbstractGraph";
 import { WaterPathFinder } from "../pathfinding/PathFinder";
@@ -120,6 +121,7 @@ export class GameImpl implements Game {
   provinces: Provinces | undefined;
   diplomacy: Diplomacy | undefined; // Overreach, set by DiplomacyExecution
   ending: Ending | undefined; // Overreach, set by CalendarExecution
+  events: Events | undefined; // Overreach, set by CalendarExecution
   private _width: number;
   private _height: number;
   _terraNullius: TerraNulliusImpl;

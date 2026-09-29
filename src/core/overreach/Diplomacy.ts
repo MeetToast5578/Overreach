@@ -11,6 +11,7 @@ import {
 } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
 import type { GameID } from "../Schemas";
+import { formableBy, homelands, renamePlayer } from "./Formables";
 import type { Provinces } from "./Provinces";
 
 // Diplomacy additions (Overreach, SANDBOX.md F6), on top of OpenFront's
@@ -60,6 +61,7 @@ export interface DiplomacyState {
   core: [number, number][];
   since: [number, number][];
   startTiles: [number, number][];
+  formed: string[];
 }
 
 export class Diplomacy {
@@ -73,6 +75,8 @@ export class Diplomacy {
   core = new Map<number, number>();
   since = new Map<number, number>();
   startTiles = new Map<number, number>();
+  // Formable nations already formed (Formables.ts).
+  formed = new Set<string>();
   // Set while secession moves provinces, so it doesn't count as aggression.
   private seceding = false;
 
@@ -99,7 +103,10 @@ export class Diplomacy {
     if (ticks % UPKEEP_EVERY === 0) this.keepSubjects();
     if (ticks % TRIBUTE_EVERY === 0) this.payTribute();
     if (ticks % COALITION_EVERY === 0) this.updateCoalitions();
-    if (ticks % UNREST_EVERY === 0) this.unrest(ticks);
+    if (ticks % UNREST_EVERY === 0) {
+      this.unrest(ticks);
+      this.formNations();
+    }
   }
 
   // ---- Subjects
@@ -364,6 +371,15 @@ export class Diplomacy {
     return rebel;
   }
 
+  /** Every province of `from` becomes `to`'s core, peacefully. */
+  annex(to: Player, from: Player): void {
+    const ids = this.provinces.records.flatMap((r, p) =>
+      r?.owner === from.smallID() ? [p] : [],
+    );
+    this.move(ids, to, from);
+    for (const p of ids) this.core.set(p, to.smallID());
+  }
+
   private move(ids: number[], to: Player, from: Player): void {
     this.seceding = true;
     for (const p of ids) {
@@ -372,6 +388,45 @@ export class Diplomacy {
       }
     }
     this.seceding = false;
+  }
+
+  // ---- Formable nations
+
+  /** The formables `p` may form now. */
+  formables(p: Player) {
+    const pv = this.provinces;
+    return formableBy(
+      this.game.config().gameConfig(),
+      this.formed,
+      p.smallID(),
+      (q) => pv.records[q]?.owner ?? 0,
+      (q) => pv.homeSize(q),
+      p.numTilesOwned(),
+    );
+  }
+
+  /** Forms formable `id` as `p` if it may; the homeland it holds is core. */
+  form(p: Player, id: string): boolean {
+    const f = this.formables(p).find((x) => x.id === id);
+    if (f === undefined) return false;
+    renamePlayer(p, f.name, f.flag, f.color);
+    this.formed.add(id);
+    const lands = homelands(this.game.config().gameConfig()).get(id) ?? [];
+    for (const q of lands) {
+      if (this.provinces.records[q]?.owner === p.smallID()) {
+        this.core.set(q, p.smallID());
+      }
+    }
+    return true;
+  }
+
+  // The AI forms what it can.
+  private formNations(): void {
+    for (const p of this.game.players()) {
+      if (p.type() !== PlayerType.Nation) continue;
+      const f = this.formables(p)[0];
+      if (f !== undefined) this.form(p, f.id);
+    }
   }
 
   // ---- Snapshots
@@ -384,6 +439,7 @@ export class Diplomacy {
       core: [...this.core],
       since: [...this.since],
       startTiles: [...this.startTiles],
+      formed: [...this.formed],
     };
   }
 
@@ -394,5 +450,6 @@ export class Diplomacy {
     this.core = new Map(s.core);
     this.since = new Map(s.since);
     this.startTiles = new Map(s.startTiles);
+    this.formed = new Set(s.formed);
   }
 }

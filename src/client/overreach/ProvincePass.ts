@@ -59,10 +59,11 @@ const MIN_ZOOM = 1.5;
 const FULL_ZOOM = 4;
 const BORDER_ALPHA = 0.5;
 // A town shows once its population is at least TOWN_POP / zoom² (zoom in
-// CSS pixels per tile): 2M at 2, 125k at 8. A province without a town counts
-// TILE_PEOPLE per tile, so it shows once it's about 45 px across.
-const TOWN_POP = 8_000_000;
-const TILE_PEOPLE = 4_000;
+// CSS pixels per tile): 500k at 2, 31k at 8 (1836 people). A province
+// without a town counts TILE_PEOPLE per tile, so it shows once it's about
+// 45 px across.
+const TOWN_POP = 2_000_000;
+const TILE_PEOPLE = 1_000;
 const MAX_NAMES = 300;
 const CENTROID_EVERY_MS = 1000;
 

@@ -5,6 +5,7 @@ import type { TransformHandler } from "../TransformHandler";
 import type { GameView } from "../view";
 import { createCalendarBar } from "./CalendarBar";
 import { createSandboxPanel } from "./SandboxPanel";
+import { createStoryPanel } from "./StoryPanel";
 
 /** Overreach's HUD for a game (GameRenderer adds these to its controllers). */
 export function overreachLayers(
@@ -17,5 +18,6 @@ export function overreachLayers(
   return [
     createSandboxPanel(game, eventBus, transform),
     createCalendarBar(game),
+    createStoryPanel(game, eventBus),
   ].filter((c): c is NonNullable<typeof c> => c !== null);
 }

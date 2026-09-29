@@ -45,6 +45,7 @@ import { WarshipExecutionSnapshot } from "../execution/WarshipExecution";
 import { WinCheckExecutionSnapshot } from "../execution/WinCheckExecution";
 import { CalendarExecutionSnapshot } from "../overreach/CalendarExecution";
 import { DiplomacyExecutionSnapshot } from "../overreach/DiplomacyExecution";
+import { OverreachExecutionSnapshot } from "../overreach/OverreachIntent";
 import { ProvinceExecutionSnapshot } from "../overreach/ProvinceExecution";
 import { SandboxExecutionSnapshot } from "../overreach/SandboxExecution";
 import { ScenarioExecutionSnapshot } from "../overreach/ScenarioExecution";
@@ -73,6 +74,7 @@ export const EXECUTION_SNAPSHOT_TYPES = [
   ProvinceExecutionSnapshot,
   DiplomacyExecutionSnapshot,
   CalendarExecutionSnapshot,
+  OverreachExecutionSnapshot,
   ScenarioExecutionSnapshot,
   DonateTroopsExecutionSnapshot,
   DoomsdayClockExecutionSnapshot,
