@@ -100,6 +100,7 @@ const DiplomacySnapshotSchema = z.object({
       since: pairs(),
       startTiles: pairs(),
       formed: z.string().array(),
+      wars: z.tuple([z.string(), zInt()]).array(),
     })
     .nullable(),
 });

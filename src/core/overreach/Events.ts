@@ -40,13 +40,14 @@ function player(g: Game, id: string): Player | null {
 
 // ---- Effects
 
-function war(a: Player, b: Player | null): void {
+function war(a: Player, b: Player | null, g: Game): void {
   if (b === null || a === b) return;
   const alliance = a.allianceWith(b);
   if (alliance !== null) alliance.expire();
   a.updateRelation(b, -100);
   b.updateRelation(a, -100);
   if (a.canTarget(b)) a.target(b);
+  (g as GameImpl).diplomacy?.declareWar(a, b);
 }
 
 function pay(from: Player, to: Player | null, percent: number): void {
@@ -104,7 +105,7 @@ export const EVENTS: HistoricalEvent[] = [
     also: [GBR],
     options: [
       // Ban the opium trade: Britain goes to war.
-      { weight: 3, effect: (g, p) => war(player(g, GBR)!, p) },
+      { weight: 3, effect: (g, p) => war(player(g, GBR)!, p, g) },
       // Let the trade go on: silver drains to Britain.
       { weight: 1, effect: (g, p) => pay(p, player(g, GBR), 25) },
     ],
@@ -127,7 +128,7 @@ export const EVENTS: HistoricalEvent[] = [
     who: USA,
     also: [MEX],
     options: [
-      { weight: 2, effect: (g, p) => war(p, player(g, MEX)) },
+      { weight: 2, effect: (g, p) => war(p, player(g, MEX), g) },
       // Offer to buy the land instead.
       { weight: 1, effect: (g, p) => pay(p, player(g, MEX), 20) },
     ],
@@ -156,7 +157,7 @@ export const EVENTS: HistoricalEvent[] = [
         weight: 2,
         effect: (g, p) => {
           const ott = player(g, OTT);
-          war(p, ott);
+          war(p, ott, g);
           ally(ott, player(g, GBR));
           ally(ott, player(g, FRA));
         },
@@ -201,7 +202,7 @@ export const EVENTS: HistoricalEvent[] = [
     test: (g) => player(g, "o1836AFG") !== null,
     options: [
       // Take Afghanistan before Russia does.
-      { weight: 2, effect: (g, p) => war(p, player(g, "o1836AFG")) },
+      { weight: 2, effect: (g, p) => war(p, player(g, "o1836AFG"), g) },
       { weight: 1, effect: () => {} },
     ],
   },

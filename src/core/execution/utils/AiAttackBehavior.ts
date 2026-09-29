@@ -13,6 +13,7 @@ import {
   TerraNullius,
   UnitType,
 } from "../../game/Game";
+import type { GameImpl } from "../../game/GameImpl";
 import { TileRef } from "../../game/GameMap";
 import { canBuildTransportShip } from "../../game/TransportShipUtils";
 import { PseudoRandom } from "../../PseudoRandom";
@@ -930,6 +931,12 @@ export class AiAttackBehavior {
   }
 
   shouldAttack(other: Player | TerraNullius): boolean {
+    // Overreach: in a calendar game nations fight only their wars.
+    if (
+      (this.game as GameImpl).diplomacy?.mayAttack(this.player, other) === false
+    ) {
+      return false;
+    }
     if (
       // Always attack Terra Nullius, non-humans and traitors
       other.isPlayer() === false ||

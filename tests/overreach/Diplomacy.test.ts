@@ -1,3 +1,4 @@
+import { AttackExecution } from "../../src/core/execution/AttackExecution";
 import {
   Game,
   GameMapSize,
@@ -8,9 +9,11 @@ import {
   Relation,
 } from "../../src/core/game/Game";
 import { GameImpl } from "../../src/core/game/GameImpl";
+import { TICKS_PER_YEAR } from "../../src/core/overreach/Calendar";
 import {
   COALITION_TILES,
   Diplomacy,
+  PEACE_TICKS,
   TRIBUTE,
 } from "../../src/core/overreach/Diplomacy";
 import { ProvinceRecord, Provinces } from "../../src/core/overreach/Provinces";
@@ -30,8 +33,12 @@ function rect(game: Game, p: Player, x0: number, x1: number, y0 = 0, y1 = 100) {
 }
 
 // Plains in 100 provinces of 10×10 tiles: province 1 + (x/10) + 10*(y/10).
-async function world(owners: (game: Game) => void) {
-  const game = await setup("plains", { instantBuild: true });
+// `calendar` gives the game a start year, which turns wars on.
+async function world(owners: (game: Game) => void, calendar = false) {
+  const game = await setup("plains", {
+    instantBuild: true,
+    ...(calendar ? { scenario: { startYear: 1836 } as Scenario } : {}),
+  });
   owners(game);
   const home = new Uint16Array(10_000);
   for (let t = 0; t < home.length; t++) {
@@ -45,6 +52,7 @@ async function world(owners: (game: Game) => void) {
   (game as GameImpl).provinces = provinces;
   const d = new Diplomacy(game, provinces, "dipgame", new PseudoRandom(5));
   d.start();
+  (game as GameImpl).diplomacy = d;
   return { game, provinces, d };
 }
 
@@ -206,5 +214,67 @@ describe("Diplomacy", () => {
     ]);
     expect(o.isAlliedWith(j)).toBe(true);
     await expectSnapshotRoundTrip(game, "plains", 20);
+  });
+
+  test("with a calendar, the AI fights only its wars; an attack starts one and subjects join", async () => {
+    let [a, b, c, v] = [] as Player[];
+    const { game, d } = await world((g) => {
+      [a, b, c, v] = ["attacker", "victim01", "bystand1", "subject1"].map(
+        (id) => nation(g, id),
+      );
+      rect(g, a, 0, 30);
+      rect(g, b, 30, 60);
+      rect(g, c, 60, 90);
+      rect(g, v, 90, 100);
+    }, true);
+    d.setSubject(a, v, "puppet");
+    expect(d.mayAttack(a, b)).toBe(false);
+    expect(d.mayAttack(a, game.terraNullius())).toBe(true);
+    a.setTroops(100_000);
+    game.addExecution(new AttackExecution(10_000, a, b.id()));
+    game.executeNextTick();
+    game.executeNextTick();
+    d.tick(10);
+    expect(d.atWar(a, b)).toBe(true);
+    expect(d.atWar(v, b)).toBe(true); // the subject joined
+    expect(d.mayAttack(b, a)).toBe(true);
+    expect(d.mayAttack(c, b)).toBe(false);
+    // An ally may join its ally's war.
+    c.createAllianceRequest(a)?.accept();
+    expect(d.mayAttack(c, b)).toBe(true);
+    // Three quiet years end it.
+    for (const at of a.outgoingAttacks()) at.delete();
+    d.tick(10 + PEACE_TICKS);
+    expect(d.atWar(a, b)).toBe(false);
+  });
+
+  test("with a calendar, each year an AI nation may declare war on its weakest neighbour", async () => {
+    let [a, b, c] = [] as Player[];
+    const { d } = await world((g) => {
+      [a, b, c] = ["strongly", "weakling", "middling"].map((id) =>
+        nation(g, id),
+      );
+      rect(g, a, 0, 40);
+      rect(g, b, 40, 50, 0, 50);
+      rect(g, c, 40, 50, 50, 100);
+    }, true);
+    a.setTroops(100_000);
+    b.setTroops(10_000);
+    c.setTroops(50_000);
+    for (let year = 1; year <= 20 && !d.atWar(a, b); year++) {
+      d.tick(year * TICKS_PER_YEAR);
+    }
+    expect(d.atWar(a, b)).toBe(true);
+    expect(d.atWar(a, c)).toBe(false);
+  });
+
+  test("without a calendar there are no wars to keep", async () => {
+    let [a, b] = [] as Player[];
+    const { d } = await world((g) => {
+      [a, b] = ["attacker", "victim01"].map((id) => nation(g, id));
+      rect(g, a, 0, 50);
+      rect(g, b, 50, 100);
+    });
+    expect(d.mayAttack(a, b)).toBe(true);
   });
 });

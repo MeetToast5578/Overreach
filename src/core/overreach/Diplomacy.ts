@@ -11,6 +11,7 @@ import {
 } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
 import type { GameID } from "../Schemas";
+import { startYear, TICKS_PER_YEAR } from "./Calendar";
 import { formableBy, homelands, renamePlayer } from "./Formables";
 import type { Provinces } from "./Provinces";
 
@@ -32,6 +33,13 @@ import type { Provinces } from "./Provinces";
 //   is gone, to a revived one). An AI nation grown past twice its start and
 //   CIVIL_WAR_SHARE of the land may split: its provinces farthest from its
 //   capital secede as a new nation.
+// - Wars, in a game with a calendar (Calendar.ts): the nation AI attacks
+//   only nations it, or an ally, is at war with (plus unclaimed land and
+//   tribes; one hook in AiAttackBehavior.shouldAttack). Any attack starts or
+//   feeds a war, and the attacker's subjects join it; coalitions and events
+//   declare wars; each year an AI nation may, with a WAR_CHANCE, declare war
+//   on its weakest non-friendly neighbour with fewer troops. A war with no
+//   fighting for PEACE_TICKS ends. Humans may attack anyone, which is a war.
 // Everything runs on DiplomacyExecution's tick, deterministically.
 
 export type SubjectKind = "vassal" | "puppet";
@@ -48,6 +56,8 @@ export const COALITION_TILES = 3000; // tiles taken, fading
 export const CORE_TICKS = 6000; // ten minutes
 export const REVOLT_SHARE = 0.3;
 export const CIVIL_WAR_SHARE = 0.15;
+export const WAR_CHANCE = 4; // one in four, a year
+export const PEACE_TICKS = 3 * TICKS_PER_YEAR;
 
 const UPKEEP_EVERY = 10;
 const TRIBUTE_EVERY = 100;
@@ -62,6 +72,7 @@ export interface DiplomacyState {
   since: [number, number][];
   startTiles: [number, number][];
   formed: string[];
+  wars: [string, number][];
 }
 
 export class Diplomacy {
@@ -77,6 +88,8 @@ export class Diplomacy {
   startTiles = new Map<number, number>();
   // Formable nations already formed (Formables.ts).
   formed = new Set<string>();
+  // "a:b" (small ids, a < b) -> the tick they last fought. Calendar games.
+  wars = new Map<string, number>();
   // Set while secession moves provinces, so it doesn't count as aggression.
   private seceding = false;
 
@@ -106,6 +119,91 @@ export class Diplomacy {
     if (ticks % UNREST_EVERY === 0) {
       this.unrest(ticks);
       this.formNations();
+    }
+    if (this.calendar() && ticks % UPKEEP_EVERY === 0) this.fight(ticks);
+    if (this.calendar() && ticks > 0 && ticks % TICKS_PER_YEAR === 0) {
+      this.declareWars();
+    }
+  }
+
+  // ---- Wars (calendar games)
+
+  private calendar(): boolean {
+    return startYear(this.game.config().gameConfig()) !== null;
+  }
+
+  private static key(a: number, b: number): string {
+    return a < b ? `${a}:${b}` : `${b}:${a}`;
+  }
+
+  atWar(a: Player, b: Player): boolean {
+    return this.wars.has(Diplomacy.key(a.smallID(), b.smallID()));
+  }
+
+  /** Whether the nation AI may attack `target` (AiAttackBehavior). */
+  mayAttack(attacker: Player, target: Player | { isPlayer(): false }): boolean {
+    if (!this.calendar() || !target.isPlayer()) return true;
+    if (attacker.type() !== PlayerType.Nation) return true;
+    if (target.type() === PlayerType.Bot) return true;
+    return (
+      this.atWar(attacker, target) ||
+      attacker.allies().some((a) => this.atWar(a, target))
+    );
+  }
+
+  /** a and b are at war (again); a's subjects join. */
+  declareWar(a: Player, b: Player): void {
+    if (a === b) return;
+    this.wars.set(Diplomacy.key(a.smallID(), b.smallID()), this.game.ticks());
+    for (const s of this.subjects) {
+      if (s.overlord !== a.smallID() || s.subject === b.smallID()) continue;
+      this.wars.set(Diplomacy.key(s.subject, b.smallID()), this.game.ticks());
+    }
+  }
+
+  // Attacks start or feed wars; quiet wars end.
+  private fight(ticks: number): void {
+    for (const p of this.game.players()) {
+      for (const a of p.outgoingAttacks()) {
+        const t = a.target();
+        if (!t.isPlayer()) continue;
+        const k = Diplomacy.key(p.smallID(), t.smallID());
+        if (this.wars.has(k)) this.wars.set(k, ticks);
+        else this.declareWar(p, t);
+      }
+    }
+    for (const [k, last] of [...this.wars]) {
+      const [a, b] = k.split(":").map(Number);
+      const alive = [a, b].every((id) => {
+        const p = this.game.playerBySmallID(id);
+        return p.isPlayer() && p.isAlive();
+      });
+      if (!alive || ticks - last >= PEACE_TICKS) this.wars.delete(k);
+    }
+  }
+
+  // Each AI nation may go to war with its weakest neighbour.
+  private declareWars(): void {
+    for (const p of this.game.players()) {
+      if (p.type() !== PlayerType.Nation || this.subjectOf(p.smallID())) {
+        continue;
+      }
+      if (!this.random.chance(WAR_CHANCE)) continue;
+      const prey = p
+        .nearby()
+        .filter(
+          (n): n is Player =>
+            n.isPlayer() &&
+            n.type() !== PlayerType.Bot &&
+            !p.isFriendly(n) &&
+            !this.atWar(p, n) &&
+            n.troops() < p.troops() * 0.8,
+        )
+        .sort((a, b) => a.troops() - b.troops() || a.smallID() - b.smallID());
+      if (prey.length > 0) {
+        this.declareWar(p, prey[0]);
+        p.updateRelation(prey[0], -100);
+      }
     }
   }
 
@@ -240,6 +338,7 @@ export class Diplomacy {
     for (const m of all) {
       m.updateRelation(target, -100);
       if (m.canTarget(target)) m.target(target);
+      if (this.calendar()) this.declareWar(m, target);
     }
     return all.map((p) => p.smallID());
   }
@@ -440,6 +539,7 @@ export class Diplomacy {
       since: [...this.since],
       startTiles: [...this.startTiles],
       formed: [...this.formed],
+      wars: [...this.wars],
     };
   }
 
@@ -451,5 +551,6 @@ export class Diplomacy {
     this.since = new Map(s.since);
     this.startTiles = new Map(s.startTiles);
     this.formed = new Set(s.formed);
+    this.wars = new Map(s.wars);
   }
 }

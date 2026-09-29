@@ -494,13 +494,30 @@ technology, the German Confederation) are still to come.**
   - survival: 2036;
   - they replace OpenFront's win check in calendar games, since its 170-minute limit would end the game around 2006. One line in `WinModal` shows the ending's title.
 - **Checked:**
-  - 19 new tests in `tests/overreach` (82 there in all): `Calendar` 4, `Endings` 6, `EndingTitle` 1, `Story` 8;
+  - 22 new tests in `tests/overreach` (97 with the snapshot test): `Calendar` 4, `Endings` 6, `EndingTitle` 1,
+    `Story` 8, and 3 war tests in `Diplomacy`;
   - a 10-year World 1836 run: the Opium War fired, and no one formed anything spurious;
   - in the browser: the date bar, silos and factories locked in 1836, and as Qing the Opium Crisis card on 9 January
     1839, where letting the trade go on paid Britain a quarter of the gold.
+- **Wars (pacing):** in a calendar game the nation AI attacks only nations it, or an ally, is at war with, plus
+  unclaimed land and tribes. One hook: `AiAttackBehavior.shouldAttack` asks `Diplomacy.mayAttack`.
+  - Any attack starts or feeds a war, and the attacker's subjects join it;
+  - coalitions and event wars declare them;
+  - each year an AI nation may (1 in 4) declare war on its weakest non-friendly neighbour with under 80% of its
+    troops;
+  - three years without fighting end a war;
+  - humans attack whom they like, and that is a war.
+- **The pace it gives World 1836:**
+
+  | After    | Nations alive, before wars | With wars |
+  | -------- | -------------------------- | --------- |
+  | 1 year   | 149                        | 178       |
+  | 10 years | 92                         | 139       |
+
+  19 of 25 subjects remain after 10 years (9 before), and the Opium War and the Texas annexation fire. Wars pile up
+  (218 open by 1846, mostly coalition members' and small skirmishes'). That's the next thing to tune.
+
 - **Not yet:**
-  - AI pacing: the AI still goes to war at once. 71 of 178 nations are gone after 5 minutes, with coalitions and
-    revolts doing what they can;
   - M8's government and stability, M11's era units (an 1836 army still fights like a 1950 one), M12's trade goods,
     and more events and formables;
   - population scaled per country (ROADMAP §3.6) and historical town names.
