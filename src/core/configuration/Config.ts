@@ -267,6 +267,8 @@ const OVERTIME_DEFAULTS = {
 
 export class Config {
   private unitInfoCache = new Map<UnitType, UnitInfo>();
+  // Overreach: units a scenario's calendar hasn't reached (Calendar.ts).
+  eraLocked: ((unitType: UnitType) => boolean) | null = null;
   constructor(
     private _gameConfig: GameConfig,
     private _userSettings: UserSettings | null,
@@ -395,7 +397,10 @@ export class Config {
   }
 
   isUnitDisabled(unitType: UnitType): boolean {
-    return this._gameConfig.disabledUnits?.includes(unitType) ?? false;
+    return (
+      (this._gameConfig.disabledUnits?.includes(unitType) ?? false) ||
+      (this.eraLocked?.(unitType) ?? false)
+    );
   }
 
   bots(): number {

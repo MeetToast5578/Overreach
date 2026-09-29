@@ -17,6 +17,7 @@ import type {
   SnapshotReader,
   SnapshotWriter,
 } from "../snapshot/SnapshotContext";
+import { CalendarExecution } from "./CalendarExecution";
 import { placeCity } from "./Cities";
 import { DiplomacyExecution } from "./DiplomacyExecution";
 import { ProvinceExecution } from "./ProvinceExecution";
@@ -112,6 +113,7 @@ export class ScenarioExecution implements Execution {
       }
     }
     g.endSpawnPhase();
+    if (s.startYear !== undefined) g.addExecution(new CalendarExecution());
     if (g.config().gameConfig().provinces !== false) {
       g.addExecution(
         new ProvinceExecution(this.gameID),

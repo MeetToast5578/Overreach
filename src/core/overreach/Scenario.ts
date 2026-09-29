@@ -56,6 +56,8 @@ export const ScenarioSchema = z.object({
   // land instead of the AI. Ignored in a sandbox, where the human observes.
   player: z.number().int().nonnegative().optional(),
   provinces: ScenarioProvincesSchema.optional(),
+  // Runs a calendar from this year, with eras (Calendar.ts).
+  startYear: z.number().int().min(1).max(3000).optional(),
   // [overlord, subject, kind] as indexes into `nations` (Diplomacy.ts).
   subjects: z
     .tuple([

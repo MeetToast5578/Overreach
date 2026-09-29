@@ -43,6 +43,7 @@ import { TribeExecutionSnapshot } from "../execution/TribeExecution";
 import { UpgradeStructureExecutionSnapshot } from "../execution/UpgradeStructureExecution";
 import { WarshipExecutionSnapshot } from "../execution/WarshipExecution";
 import { WinCheckExecutionSnapshot } from "../execution/WinCheckExecution";
+import { CalendarExecutionSnapshot } from "../overreach/CalendarExecution";
 import { DiplomacyExecutionSnapshot } from "../overreach/DiplomacyExecution";
 import { ProvinceExecutionSnapshot } from "../overreach/ProvinceExecution";
 import { SandboxExecutionSnapshot } from "../overreach/SandboxExecution";
@@ -71,6 +72,7 @@ export const EXECUTION_SNAPSHOT_TYPES = [
   SandboxExecutionSnapshot,
   ProvinceExecutionSnapshot,
   DiplomacyExecutionSnapshot,
+  CalendarExecutionSnapshot,
   ScenarioExecutionSnapshot,
   DonateTroopsExecutionSnapshot,
   DoomsdayClockExecutionSnapshot,

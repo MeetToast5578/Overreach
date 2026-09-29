@@ -277,6 +277,7 @@ def scenario(owner, tags):
         "version": 1,
         "map": "World",
         "mapSize": "Normal",
+        "startYear": 1836,
         "nations": nations,
         "alliances": alliances,
         "subjects": [[order[o] - 1, order[s] - 1, kind] for o, s, kind in data.SUBJECTS
