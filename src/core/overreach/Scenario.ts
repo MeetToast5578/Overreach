@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { GameMapSize, GameMapType } from "../game/Game";
+import { MAX_PROVINCES } from "./Provinces";
 import {
   ColorSchema,
   FlagSchema,
@@ -27,6 +28,16 @@ export const ScenarioNationSchema = z.object({
 });
 export type ScenarioNation = z.infer<typeof ScenarioNationSchema>;
 
+// Drawn provinces (Provinces.ts): province i + 1 is names[i], with its
+// capital tile or null. Without them a game generates its own.
+export const ScenarioProvincesSchema = z.object({
+  names: z.string().max(80).array().max(MAX_PROVINCES),
+  capitals: z.number().int().nonnegative().nullable().array(),
+  // Every tile's home province (0 for none) as runs, like `owners`.
+  home: z.number().int().nonnegative().array(),
+});
+export type ScenarioProvinces = z.infer<typeof ScenarioProvincesSchema>;
+
 export const ScenarioSchema = z.object({
   version: z.literal(1),
   map: z.enum(GameMapType),
@@ -40,6 +51,7 @@ export const ScenarioSchema = z.object({
   // The nation (index) the single-player human plays: they start with its
   // land instead of the AI. Ignored in a sandbox, where the human observes.
   player: z.number().int().nonnegative().optional(),
+  provinces: ScenarioProvincesSchema.optional(),
 });
 export type Scenario = z.infer<typeof ScenarioSchema>;
 

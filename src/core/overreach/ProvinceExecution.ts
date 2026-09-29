@@ -10,7 +10,8 @@ import type {
 } from "../snapshot/SnapshotContext";
 import { zInt, zU16Array } from "../snapshot/SnapshotType";
 import { simpleHash } from "../Util";
-import { generateProvinces, Provinces } from "./Provinces";
+import { generateProvinces, ProvinceRecord, Provinces } from "./Provinces";
+import { forEachOwnedTile, type ScenarioProvinces } from "./Scenario";
 
 // Owns the game's provinces (Provinces.ts): builds them on its first tick,
 // from the current tile owners, and flips provinces every tick after.
@@ -22,7 +23,10 @@ export class ProvinceExecution implements Execution {
   constructor(private gameID: GameID) {}
 
   init(mg: Game): void {
-    const { home, records } = generateProvinces(mg, simpleHash(this.gameID));
+    const drawn = mg.config().gameConfig().scenario?.provinces;
+    const { home, records } =
+      (drawn && drawnProvinces(mg, drawn)) ??
+      generateProvinces(mg, simpleHash(this.gameID));
     this.attach(mg, new Provinces(mg, home, records));
   }
 
@@ -74,6 +78,31 @@ export class ProvinceExecution implements Execution {
     s.layers.pending.forEach((id) => p.pending.add(id));
     this.attach(r.game, p);
   }
+}
+
+// A scenario's provinces, or null if they don't fit this map. Water and
+// impassable tiles get none; a capital outside its province is dropped.
+function drawnProvinces(
+  mg: Game,
+  s: ScenarioProvinces,
+): { home: Uint16Array; records: (ProvinceRecord | null)[] } | null {
+  const home = new Uint16Array(mg.width() * mg.height());
+  let bad = false;
+  const covered = forEachOwnedTile(s.home, (t, p) => {
+    if (p > s.names.length) bad = true;
+    else if (mg.isLand(t) && !mg.isImpassable(t)) home[t] = p;
+  });
+  if (bad || covered !== home.length) return null;
+  const records: (ProvinceRecord | null)[] = [null];
+  s.names.forEach((name, i) => {
+    const c = s.capitals[i] ?? null;
+    records.push({
+      name,
+      owner: 0,
+      capital: c !== null && home[c] === i + 1 ? c : null,
+    });
+  });
+  return { home, records };
 }
 
 const ProvinceStateSchema = z.object({

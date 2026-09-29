@@ -253,13 +253,6 @@ def scenario(owner, tags):
     remap = np.zeros(len(tags), np.int32)
     for t, i in order.items():
         remap[tags.index(t)] = i
-    flat = remap[owner].ravel()
-    change = np.flatnonzero(np.diff(flat)) + 1
-    starts = np.concatenate([[0], change])
-    lengths = np.diff(np.concatenate([starts, [flat.size]]))
-    runs = np.empty(2 * len(starts), np.int64)
-    runs[0::2], runs[1::2] = flat[starts], lengths
-
     flags = os.path.join(REPO, "resources/flags")
     nations = []
     for t in present:
@@ -280,8 +273,80 @@ def scenario(owner, tags):
         "mapSize": "Normal",
         "nations": nations,
         "alliances": alliances,
-        "owners": runs.tolist(),
+        "owners": runs_of(remap[owner]),
     }, empty
+
+
+def runs_of(grid):
+    """A grid in tile order (row by row) as [value, length, ...] runs."""
+    flat = grid.ravel()
+    starts = np.concatenate([[0], np.flatnonzero(np.diff(flat)) + 1])
+    lengths = np.diff(np.concatenate([starts, [flat.size]]))
+    runs = np.empty(2 * len(starts), np.int64)
+    runs[0::2], runs[1::2] = flat[starts], lengths
+    return runs.tolist()
+
+
+MIN_PIECE = 8  # tiles
+
+
+def provinces(args, g, owner):
+    """The scenario's home provinces: the legacy builder's 5,245, cut where
+    1836 borders cross them. Cut pieces under MIN_PIECE tiles join the
+    same-owner neighbour they share most edge with. A piece holding its
+    province's main town is named after it and has it as capital; the rest
+    take the subregion's name."""
+    cache = os.path.join(args.legacy, "map8k")
+    py, px = legacy_index(g.lon, g.lat)
+    pro = np.load(os.path.join(cache, "provinces.npy"))[py, px].astype(np.int64)
+    has = pro > 0
+    pro = nearest_fill(pro, has, g.land & ~has)
+    key = np.where(g.land, pro * 1024 + owner, -1)
+    uniq, piece = np.unique(key, return_inverse=True)  # piece 0 is water
+    piece = piece.reshape(H, W)
+    legacy_of, owner_of = uniq // 1024, uniq % 1024
+
+    size = np.bincount(piece.ravel(), minlength=len(uniq))
+    small = size < MIN_PIECE
+    small[0] = False
+    a = np.concatenate([piece[:, :-1].ravel(), piece[:-1, :].ravel()])
+    b = np.concatenate([piece[:, 1:].ravel(), piece[1:, :].ravel()])
+    keep = (a != b) & (a > 0) & (b > 0)
+    pairs = np.concatenate([np.stack([a[keep], b[keep]], 1), np.stack([b[keep], a[keep]], 1)])
+    pairs = pairs[small[pairs[:, 0]] & (owner_of[pairs[:, 0]] == owner_of[pairs[:, 1]])]
+    edges, counts = np.unique(pairs, axis=0, return_counts=True)
+    target = np.arange(len(uniq))
+    best = {}
+    for (s, n), c in zip(edges.tolist(), counts.tolist()):
+        if s not in best or c > best[s][1]:
+            best[s] = (n, c)
+
+    def root(i):
+        while target[i] != i:
+            i = target[i]
+        return i
+
+    for s in sorted(best, key=lambda s: size[s]):
+        if root(best[s][0]) != s:
+            target[s] = best[s][0]
+    target = np.array([root(i) for i in range(len(uniq))])
+    ids, home = np.unique(target[piece], return_inverse=True)  # ids[0] is water
+    home = home.reshape(H, W)
+
+    records = json.load(open(os.path.join(cache, "provinces.json"), encoding="utf-8"))
+    subs = {s["id"]: s["name"] for s in records["subregions"]}
+    legacy = {p["id"]: p for p in records["provinces"]}
+    names, capitals = [], []
+    for i, pc in enumerate(ids[1:], 1):
+        rec = legacy[int(legacy_of[pc])]
+        city, capital = rec["city"], None
+        if city:
+            x, y = tile_of(city["lon"], city["lat"])
+            if home[y, x] == i:
+                capital = y * W + x
+        names.append(city["name"] if capital is not None else subs.get(rec["sub"], f"Province {i}"))
+        capitals.append(capital)
+    return {"names": names, "capitals": capitals, "home": runs_of(home)}, home
 
 
 def palette(tag):
@@ -295,7 +360,7 @@ def palette(tag):
     return "#%02x%02x%02x" % tuple(int(round((v + m) * 255)) for v in (r, g_, b))
 
 
-def preview(path, g, owner, tags, scenario_nations):
+def preview(path, g, owner, tags, scenario_nations, home):
     colors = np.zeros((len(tags), 3), np.uint8)
     for n in scenario_nations:
         t = n["id"][5:]
@@ -303,10 +368,11 @@ def preview(path, g, owner, tags, scenario_nations):
     img = np.where(g.land[..., None], np.uint8([200, 190, 160]), np.uint8([40, 70, 110]))
     owned = owner > 0
     img[owned] = colors[owner[owned]]
-    edge = np.zeros_like(owned)
-    edge[:, 1:] |= owner[:, 1:] != owner[:, :-1]
-    edge[1:, :] |= owner[1:, :] != owner[:-1, :]
-    img[edge & g.land] = [30, 30, 30]
+    for grid, shade in ((home, 0.7), (owner, 0.15)):
+        edge = np.zeros_like(owned)
+        edge[:, 1:] |= grid[:, 1:] != grid[:, :-1]
+        edge[1:, :] |= grid[1:, :] != grid[:-1, :]
+        img[edge & g.land] = (img[edge & g.land] * shade).astype(np.uint8)
     Image.fromarray(img).save(path)
 
 
@@ -337,8 +403,11 @@ def main():
           f"{len(out['owners']) // 2} runs, {len(data.CHECKS) - len(failures)}/{len(data.CHECKS)} town checks pass")
     for f in failures:
         print("  FAIL", f)
+    out["provinces"], home = provinces(args, g, owner)
+    print(f"{len(out['provinces']['names'])} provinces, "
+          f"{sum(c is not None for c in out['provinces']['capitals'])} with a capital town")
     if args.preview:
-        preview(args.preview, g, owner, tags, out["nations"])
+        preview(args.preview, g, owner, tags, out["nations"], home)
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
     with open(args.out, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, separators=(",", ":"))

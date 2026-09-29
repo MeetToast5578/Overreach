@@ -1,3 +1,5 @@
+import fs from "fs";
+import path from "path";
 import { AttackExecution } from "../../src/core/execution/AttackExecution";
 import {
   Game,
@@ -14,7 +16,11 @@ import {
   ProvinceRecord,
   Provinces,
 } from "../../src/core/overreach/Provinces";
-import { encodeOwners } from "../../src/core/overreach/Scenario";
+import {
+  encodeOwners,
+  Scenario,
+  ScenarioSchema,
+} from "../../src/core/overreach/Scenario";
 import { PseudoRandom } from "../../src/core/PseudoRandom";
 import { createScriptedRunner, scriptedGameStart } from "../util/ScriptedGame";
 import { setup } from "../util/Setup";
@@ -47,6 +53,23 @@ async function stripes() {
   const provinces = new Provinces(game, home, records);
   (game as GameImpl).provinces = provinces;
   return { game, a, b, provinces };
+}
+
+async function startScenario(map: string, scenario: Scenario): Promise<Game> {
+  const runner = await createScriptedRunner(
+    map,
+    scriptedGameStart({
+      gameMapSize: GameMapSize.Normal,
+      nations: "disabled",
+      bots: 0,
+      scenario,
+    }),
+  );
+  for (let turn = 0; turn < 3; turn++) {
+    runner.addTurn({ turnNumber: turn, intents: [] });
+    runner.executeNextTick();
+  }
+  return runner.game;
 }
 
 describe("Provinces", () => {
@@ -179,6 +202,54 @@ describe("Provinces", () => {
       if (broken !== null) throw new Error(`turn ${turn}: ${broken}`);
     }
   }, 120_000);
+
+  test("a scenario's drawn provinces: names, capitals, owners", async () => {
+    const game = await startScenario("plains", {
+      version: 1,
+      map: GameMapType.World,
+      mapSize: GameMapSize.Normal,
+      nations: [
+        { id: "westland", name: "Westland" },
+        { id: "eastland", name: "Eastland" },
+      ],
+      alliances: [],
+      owners: encodeOwners(10_000, (t) => (t % 100 < 37 ? 1 : 2)),
+      provinces: {
+        names: ["West", "East"],
+        // East's capital lies in West, so it is dropped.
+        capitals: [10 * 100 + 10, 20 * 100 + 10],
+        home: encodeOwners(10_000, (t) => (t % 100 < 50 ? 1 : 2)),
+      },
+    });
+    const provinces = (game as GameImpl).provinces!;
+    const west = game.player("westland").smallID();
+    const east = game.player("eastland").smallID();
+    expect(provinces.records.slice(1)).toEqual([
+      { name: "West", owner: west, capital: 1010 },
+      { name: "East", owner: east, capital: null },
+    ]);
+    // Eastland's strip of West counts in East.
+    expect(provinces.province(game.ref(40, 5))).toBe(2);
+    expect(provinces.violation()).toBeNull();
+    expect(game.player("westland").numTilesOwned()).toBe(3700);
+  });
+
+  test("World 1836 starts with its provinces", async () => {
+    const file = path.join(
+      __dirname,
+      "../../resources/scenarios/world-1836.json",
+    );
+    const scenario = ScenarioSchema.parse(
+      JSON.parse(fs.readFileSync(file, "utf8")),
+    );
+    const game = await startScenario("world", scenario);
+    const provinces = (game as GameImpl).provinces!;
+    expect(provinces.violation()).toBeNull();
+    expect(provinces.records.length).toBeGreaterThan(5000);
+    const paris = provinces.records.find((r) => r?.name === "Paris")!;
+    expect(paris.owner).toBe(game.player("o1836FRA").smallID());
+    expect(game.ownerID(paris.capital!)).toBe(paris.owner);
+  }, 60_000);
 
   test("snapshots keep the provinces", async () => {
     const game = await setup("plains");
