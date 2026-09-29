@@ -154,6 +154,49 @@ describe("Provinces", () => {
     expect(provinces.violation()).toBeNull();
   });
 
+  test("sandbox edits: split keeps the tile total, merge, create, assign, rename, capital", async () => {
+    const { game, a, b, provinces } = await stripes();
+    const east = provinces.split(2, game.ref(15, 0), game.ref(15, 99), "East");
+    expect(east).toBeGreaterThan(10);
+    expect(provinces.homeSize(east)).toBe(400); // x 16-19
+    expect(provinces.homeSize(2) + provinces.homeSize(east)).toBe(1000);
+    expect(provinces.records[east]!.owner).toBe(b.smallID());
+    expect(provinces.province(game.ref(17, 3))).toBe(east);
+    expect(provinces.violation()).toBeNull();
+
+    provinces.merge(2, east);
+    expect(provinces.homeSize(2)).toBe(1000);
+    expect(provinces.records[east]).toBeNull();
+    expect(provinces.violation()).toBeNull();
+
+    const corner: number[] = [];
+    for (let x = 0; x < 5; x++)
+      for (let y = 0; y < 10; y++) corner.push(game.ref(x, y));
+    const acorn = provinces.create(corner, "Acorn");
+    expect(provinces.records[acorn]).toEqual({
+      name: "Acorn",
+      owner: a.smallID(),
+      capital: null,
+    });
+    expect(provinces.homeSize(1)).toBe(950);
+
+    // B's tiles moved into A's province keep counting in B's.
+    provinces.assign([game.ref(10, 0), game.ref(11, 0)], 1);
+    expect(provinces.heldBy(1, b.smallID())).toBe(2);
+    expect(provinces.province(game.ref(10, 0))).toBe(2);
+    expect(provinces.violation()).toBeNull();
+
+    provinces.rename(1, "Alpha");
+    expect(provinces.records[1]!.name).toBe("Alpha");
+    provinces.setCapital(2, game.ref(5, 5)); // not in province 2: ignored
+    expect(provinces.records[2]!.capital).toBeNull();
+    provinces.setCapital(2, game.ref(12, 50));
+    a.conquer(game.ref(12, 50));
+    provinces.applyFlips();
+    expect(provinces.records[2]!.owner).toBe(a.smallID());
+    expect(provinces.violation()).toBeNull();
+  });
+
   test("generated provinces cover the land and nothing else", async () => {
     const game = await setup("half_land_half_ocean");
     const { home, records } = generateProvinces(game, 42, 4);
@@ -188,6 +231,20 @@ describe("Provinces", () => {
           const t = t0 + i;
           if (t < 10_000 && game.ownerID(t) !== p.smallID()) p.conquer(t);
         }
+      } else if (roll === 5) {
+        // A province edit.
+        const pv = (game as GameImpl).provinces!;
+        const ids = pv.records.flatMap((r, i) => (r ? [i] : []));
+        const some = () => ids[rand.nextInt(0, ids.length)];
+        const t0 = tile();
+        const rect = [...Array(30).keys()]
+          .map((i) => t0 + (i % 6) + 100 * Math.floor(i / 6))
+          .filter((t) => t < 10_000);
+        const edit = rand.nextInt(0, 4);
+        if (edit === 0) pv.create(rect, "Fuzz");
+        else if (edit === 1) pv.assign(rect, some());
+        else if (edit === 2) pv.split(some(), tile(), tile(), "Half");
+        else pv.merge(some(), some());
       } else if (roll < 7) {
         for (const t of [...p.tiles()].slice(0, 10)) p.relinquish(t);
       } else {

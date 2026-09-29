@@ -135,6 +135,117 @@ export class Provinces {
     return null;
   }
 
+  // ---- Sandbox edits (SandboxExecution). Unknown provinces are ignored.
+
+  /** A new province of these tiles, owned by whoever holds most of them. */
+  create(tiles: TileRef[], name: string): number {
+    const p = this.newRecord({ name, owner: 0, capital: null });
+    if (p === 0) return 0;
+    this.setHome(tiles, p);
+    if (this.homeSize(p) > 0) return p;
+    this.records[p] = null;
+    return 0;
+  }
+
+  assign(tiles: TileRef[], p: number): void {
+    if (this.records[p]) this.setHome(tiles, p);
+  }
+
+  /** p's tiles left of the line from a to b become a new province. */
+  split(p: number, a: TileRef, b: TileRef, name: string): number {
+    const g = this.game;
+    if (!this.records[p] || a >= this.home.length || b >= this.home.length) {
+      return 0;
+    }
+    const [ax, ay, bx, by] = [g.x(a), g.y(a), g.x(b), g.y(b)];
+    const left = [...this.tilesOf(p)].filter(
+      (t) => (bx - ax) * (g.y(t) - ay) - (by - ay) * (g.x(t) - ax) < 0,
+    );
+    if (left.length === 0 || left.length === this.homeSize(p)) return 0;
+    return this.create(left, name);
+  }
+
+  merge(into: number, from: number): void {
+    const target = this.records[into];
+    if (into === from || !target || !this.records[from]) return;
+    this.setHome([...this.tilesOf(from)], into);
+    for (const t of [...(this.ix().loose.get(from) ?? [])]) {
+      if (this.game.ownerID(t) === target.owner) this.setProv(t, into);
+    }
+    this.dropIfEmpty(from);
+  }
+
+  rename(p: number, name: string): void {
+    const rec = this.records[p];
+    if (rec) rec.name = name;
+  }
+
+  /** Taking a province's capital flips it (decided on the next tick). */
+  setCapital(p: number, tile: TileRef | null): void {
+    const rec = this.records[p];
+    if (!rec || (tile !== null && this.home[tile] !== p)) return;
+    rec.capital = tile;
+    this.pending.add(p);
+  }
+
+  // Moves tiles' home to p. The owner rule holds throughout: a moved tile
+  // counts in p if it is p's owner's (or nobody's), else stays where it
+  // counted if that is still its owner's, else is attached.
+  private setHome(tiles: TileRef[], p: number): void {
+    const g = this.game;
+    const touched = new Set<number>();
+    const moved: TileRef[] = [];
+    for (const t of tiles) {
+      if (t >= this.home.length || this.home[t] === p) continue;
+      if (!g.isLand(t) || g.isImpassable(t)) continue;
+      touched.add(this.home[t]);
+      this.home[t] = p;
+      moved.push(t);
+    }
+    if (moved.length === 0) return;
+    this.reindex();
+    const rec = this.records[p]!;
+    if (rec.owner === 0) rec.owner = this.mostHeld(p)[0];
+    // A capital that moved goes with its tile. (Before the tiles move over:
+    // a province that empties then is gone.)
+    for (const q of touched) {
+      const old = this.records[q];
+      if (old && old.capital !== null && this.home[old.capital] === p) {
+        rec.capital ??= old.capital;
+        old.capital = null;
+      }
+    }
+    for (const t of moved) {
+      const o = g.ownerID(t);
+      const q = this.prov[t];
+      if (o === 0 || o === rec.owner) this.setProv(t, p);
+      else if (q === 0 || this.records[q]?.owner !== o) {
+        this.setProv(t, this.attach(t, o));
+      }
+    }
+    this.pending.add(p);
+    for (const q of touched) {
+      if (q === 0 || !this.records[q]) continue;
+      this.pending.add(q);
+      this.dropIfEmpty(q);
+    }
+  }
+
+  private dropIfEmpty(q: number): void {
+    if (this.homeSize(q) === 0 && !this.ix().loose.get(q)?.size) {
+      this.records[q] = null;
+    }
+  }
+
+  private mostHeld(p: number): [number, number] {
+    let best = 0;
+    let bestN = 0;
+    for (const [x, n] of this.ix().held[p] ?? []) {
+      if (n > bestN || (n === bestN && x < best)) [best, bestN] = [x, n];
+    }
+    return [best, bestN];
+  }
+
   reindex(): void {
     this.provinceIndex = null;
   }
@@ -156,11 +267,11 @@ export class Provinces {
     };
     this.provinceIndex = ix;
     for (let t = 0; t < this.home.length; t++) {
-      const o = this.game.ownerID(t);
-      if (o === 0) continue;
-      if (this.home[t] !== 0) this.count(this.home[t], o, 1);
+      // Unowned tiles are only away from home in the middle of setHome.
       if (this.prov[t] !== this.home[t] && this.prov[t] !== 0)
         this.addLoose(this.prov[t], t);
+      const o = this.game.ownerID(t);
+      if (o !== 0 && this.home[t] !== 0) this.count(this.home[t], o, 1);
     }
     return ix;
   }
@@ -222,20 +333,22 @@ export class Provinces {
   private newProvince(t: TileRef, owner: number): number {
     const home = this.records[this.home[t]];
     const player = this.game.playerBySmallID(owner);
-    const rec = {
-      name: home?.name ?? (player.isPlayer() ? player.name() : ""),
-      owner,
-      capital: null,
-    };
+    const name = home?.name ?? (player.isPlayer() ? player.name() : "");
+    // ponytail: 65,535 ids; past that a loose tile stays at home, breaking
+    // the owner rule. Recycle harder if a game ever gets there.
+    return this.newRecord({ name, owner, capital: null }) || this.home[t];
+  }
+
+  // A free id for rec, or 0 when all 65,535 are taken.
+  private newRecord(rec: ProvinceRecord): number {
     let id = this.records.indexOf(null, 1);
     if (id === -1) {
-      // ponytail: 65,535 ids; past that a loose tile stays at home, breaking
-      // the owner rule. Recycle harder if a game ever gets there.
-      if (this.records.length > MAX_PROVINCES) return this.home[t];
+      if (this.records.length > MAX_PROVINCES) return 0;
       id = this.records.push(rec) - 1;
       this.ix().held[id] = new Map();
     } else {
       this.records[id] = rec;
+      this.ix().held[id] = new Map();
     }
     return id;
   }
@@ -255,11 +368,7 @@ export class Provinces {
       const x = g.ownerID(rec.capital);
       if (x !== 0 && x !== rec.owner) return this.flip(p, x);
     }
-    let best = 0;
-    let bestN = 0;
-    for (const [x, n] of this.ix().held[p] ?? []) {
-      if (n > bestN || (n === bestN && x < best)) [best, bestN] = [x, n];
-    }
+    const [best, bestN] = this.mostHeld(p);
     const abandoned =
       this.heldBy(p, rec.owner) === 0 && !this.ix().loose.get(p)?.size;
     if (abandoned && best === 0) rec.owner = 0;
@@ -297,13 +406,7 @@ export class Provinces {
     const g = this.game;
     for (let p = 1; p < this.records.length; p++) {
       const rec = this.records[p];
-      if (!rec) continue;
-      let best = 0;
-      let bestN = 0;
-      for (const [x, n] of this.ix().held[p]) {
-        if (n > bestN || (n === bestN && x < best)) [best, bestN] = [x, n];
-      }
-      rec.owner = best;
+      if (rec) rec.owner = this.mostHeld(p)[0];
     }
     let rest: TileRef[] = [];
     for (let t = 0; t < this.home.length; t++) {

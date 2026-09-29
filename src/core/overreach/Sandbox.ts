@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { zb } from "../../../zbin";
 import { UnitType } from "../game/Game";
+import { MAX_PROVINCES } from "./Provinces";
 
 // Sandbox mode (Overreach): god-mode edits, sent as a single "sandbox" intent.
 // Only honoured when the game config has `sandbox: true` (see SandboxExecution).
@@ -47,6 +48,7 @@ export const SANDBOX_STRUCTURES = [
 
 const PlayerIDSchema = z.string().min(1).max(64);
 const TileSchema = z.number().int().nonnegative();
+const ProvinceIDSchema = z.number().int().min(1).max(MAX_PROVINCES);
 
 // Shared with scenarios (Scenario.ts).
 export const NewPlayerIDSchema = z.string().regex(/^[A-Za-z0-9]{8,10}$/); // Schemas.GAME_ID_REGEX
@@ -110,6 +112,40 @@ export const SandboxActionSchema = z.discriminatedUnion("kind", [
     kind: z.literal("set_ai"),
     player: PlayerIDSchema,
     on: z.boolean(),
+  }),
+  // Provinces (Provinces.ts). New ones go to whoever holds most of them; a
+  // split takes the tiles left of the line from a to b.
+  z.object({
+    kind: z.literal("province_create"),
+    tiles: TileSchema.array().max(MAX_PAINT_TILES),
+    name: NationNameSchema,
+  }),
+  z.object({
+    kind: z.literal("province_assign"),
+    tiles: TileSchema.array().max(MAX_PAINT_TILES),
+    province: ProvinceIDSchema,
+  }),
+  z.object({
+    kind: z.literal("province_split"),
+    province: ProvinceIDSchema,
+    a: TileSchema,
+    b: TileSchema,
+    name: NationNameSchema,
+  }),
+  z.object({
+    kind: z.literal("province_merge"),
+    into: ProvinceIDSchema,
+    from: ProvinceIDSchema,
+  }),
+  z.object({
+    kind: z.literal("province_rename"),
+    province: ProvinceIDSchema,
+    name: NationNameSchema,
+  }),
+  z.object({
+    kind: z.literal("province_capital"),
+    province: ProvinceIDSchema,
+    tile: TileSchema.nullable(),
   }),
   // Runs `intent` as `player`. The intent is checked against IntentSchema
   // when it arrives (sandboxExec), not here, to keep Schemas.ts out of this file.

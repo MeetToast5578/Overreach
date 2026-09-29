@@ -14,6 +14,7 @@ import {
 import { GameImpl } from "../../src/core/game/GameImpl";
 import { PlayerImpl } from "../../src/core/game/PlayerImpl";
 import { GameRunner } from "../../src/core/GameRunner";
+import { ProvinceExecution } from "../../src/core/overreach/ProvinceExecution";
 import { SandboxAction } from "../../src/core/overreach/Sandbox";
 import { SandboxExecution } from "../../src/core/overreach/SandboxExecution";
 import { IntentSchema } from "../../src/core/Schemas";
@@ -349,6 +350,38 @@ describe("Sandbox", () => {
     expect(
       authorizeIntent(intent, hostActor, { ...lobby, isPublic: true }),
     ).toMatchObject({ status: 403 });
+  });
+
+  test("province edits: create, split, rename, merge, capital", () => {
+    game.addExecution(new ProvinceExecution(gameID));
+    game.executeNextTick();
+    run({ kind: "paint", tiles: block(0, 0, 20), owner: "host" });
+    const provinces = (game as GameImpl).provinces!;
+    run({ kind: "province_create", tiles: block(0, 0, 20), name: "Hostland" });
+    const p = provinces.province(game.ref(5, 5));
+    expect(provinces.records[p]).toEqual({
+      name: "Hostland",
+      owner: host.smallID(),
+      capital: null,
+    });
+    run({
+      kind: "province_split",
+      province: p,
+      a: game.ref(10, 0),
+      b: game.ref(10, 19),
+      name: "Easthold",
+    });
+    const east = provinces.province(game.ref(15, 5));
+    expect(east).not.toBe(p);
+    expect(provinces.homeSize(p) + provinces.homeSize(east)).toBe(400);
+    run({ kind: "province_rename", province: east, name: "Eastmarch" });
+    expect(provinces.records[east]!.name).toBe("Eastmarch");
+    run({ kind: "province_capital", province: east, tile: game.ref(15, 5) });
+    expect(provinces.records[east]!.capital).toBe(game.ref(15, 5));
+    run({ kind: "province_merge", into: p, from: east });
+    expect(provinces.homeSize(p)).toBe(400);
+    expect(provinces.records[p]!.capital).toBe(game.ref(15, 5));
+    expect(provinces.violation()).toBeNull();
   });
 });
 

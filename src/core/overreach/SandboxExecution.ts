@@ -110,11 +110,27 @@ export class SandboxExecution implements Execution {
         return this.build(a.unit, a.tile);
       case "set_ai":
         return this.withPlayer(a.player, (p) => this.setAi(p, a.on));
+      case "province_create":
+        return void this.provinces()?.create(a.tiles, a.name);
+      case "province_assign":
+        return this.provinces()?.assign(a.tiles, a.province);
+      case "province_split":
+        return void this.provinces()?.split(a.province, a.a, a.b, a.name);
+      case "province_merge":
+        return this.provinces()?.merge(a.into, a.from);
+      case "province_rename":
+        return this.provinces()?.rename(a.province, a.name);
+      case "province_capital":
+        return this.provinces()?.setCapital(a.province, a.tile);
       case "as": // resolved at intake by sandboxExec
         return;
       default:
         assertNever(a);
     }
+  }
+
+  private provinces() {
+    return (this.mg as GameImpl).provinces;
   }
 
   private player(id: PlayerID): Player | null {
