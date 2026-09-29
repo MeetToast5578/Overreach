@@ -25,6 +25,7 @@ import {
 } from "../../Cosmetics";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import { isDesktopShell } from "../../DesktopShell";
+import { endingTitle } from "../../overreach/EndingTitle";
 import { Platform } from "../../Platform";
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { steamSDK } from "../../SteamSDK";
@@ -261,6 +262,7 @@ export class WinModal extends LitElement implements Controller {
   }
 
   async show() {
+    this._title = endingTitle(this.game) ?? this._title; // Overreach
     crazyGamesSDK.gameplayStop();
     this.isRankedGame =
       this.game.config().gameConfig().rankedType !== undefined;

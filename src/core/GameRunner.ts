@@ -201,8 +201,12 @@ export class GameRunner {
         ...this.execManager.spawnTribes(this.game.config().bots()),
       );
     }
-    // Overreach: nobody wins a sandbox.
-    if (this.game.config().gameConfig().sandbox !== true) {
+    // Overreach: nobody wins a sandbox, and a calendar game has its own
+    // endings (CalendarExecution).
+    if (
+      this.game.config().gameConfig().sandbox !== true &&
+      this.game.config().gameConfig().scenario?.startYear === undefined
+    ) {
       this.game.addExecution(new WinCheckExecution());
     }
     if (this.game.config().doomsdayClockConfig().enabled) {

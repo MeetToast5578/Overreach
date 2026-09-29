@@ -2,6 +2,7 @@ import type { Game } from "../game/Game";
 import type { GameImpl } from "../game/GameImpl";
 import type { CityRecord } from "./Cities";
 import type { Subject } from "./Diplomacy";
+import type { Ending } from "./Endings";
 import type { ProvinceRecord, Provinces } from "./Provinces";
 
 // What the client needs to draw provinces (GameUpdateViewData.provinces):
@@ -17,17 +18,25 @@ export interface ProvinceViewUpdate {
   cities?: [number, CityRecord | null][];
   // Every subject bond, when any changed.
   subjects?: Subject[];
+  // How the game ended (Endings.ts), once.
+  ending?: Ending;
 }
 
 export class ProvinceViewTracker {
   private sent: Provinces | null = null;
   private shadow: (ProvinceRecord | null)[] = [];
   private subjectsSent = "";
+  private endingSent = false;
 
   next(game: Game): ProvinceViewUpdate | undefined {
-    const p = (game as GameImpl).provinces;
-    if (p === undefined) return undefined;
     const out: ProvinceViewUpdate = {};
+    const ending = (game as GameImpl).ending;
+    if (ending !== undefined && !this.endingSent) {
+      this.endingSent = true;
+      out.ending = { ...ending };
+    }
+    const p = (game as GameImpl).provinces;
+    if (p === undefined) return out.ending ? out : undefined;
     if (p !== this.sent || p.clientOverflow) {
       this.sent = p;
       this.shadow = [];
@@ -77,8 +86,6 @@ export class ProvinceViewTracker {
       this.subjectsSent = key;
       out.subjects = subjects.map((s) => ({ ...s }));
     }
-    return out.layer || out.tiles || out.records || out.cities || out.subjects
-      ? out
-      : undefined;
+    return Object.keys(out).length > 0 ? out : undefined;
   }
 }

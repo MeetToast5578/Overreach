@@ -742,6 +742,16 @@
       "warship": "Warship"
     }
   },
+  "ending": {
+    "domination": "{name} rules the world",
+    "domination_you": "You rule the world",
+    "monopoly": "{name} controls the world's trade",
+    "monopoly_you": "You control the world's trade",
+    "peace": "World peace: no war for ten years",
+    "survival": "2036: {name} is the greatest power left",
+    "survival_you": "2036: you survived",
+    "winter": "Nuclear winter: everyone loses"
+  },
   "error_modal": {
     "connection_error": "Connection error!",
     "connection_lost": "Lost connection to the game server and could not reconnect. Refresh the page to try rejoining.",
