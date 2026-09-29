@@ -398,6 +398,58 @@ Checked:
 - The AI through their `execution/nation/` code.
 - **Checks:** a civil war splits off whole provinces; an allied pair beats a stronger single nation in most seeds.
 
+**Status (29 Sep 2026): done.**
+
+- **Built on OpenFront's own alliances, targets and relations**, which its nation AI already acts on, so the AI needed
+  no changes (`src/core/overreach/Diplomacy.ts`, run by `DiplomacyExecution`, added next to `ProvinceExecution`).
+- **Subjects:**
+  - a vassal or puppet keeps a standing alliance with its overlord, renewed before it expires. So neither attacks
+    the other, and the AI's "assist" strategy joins the other's wars;
+  - tribute: 10% (vassal) or 25% (puppet) of the subject's gold every 10 s;
+  - a vassal breaks free once it has half its overlord's land. Land, not troops: troops swing with every attack,
+    and vassals slipped away mid-war. A puppet never breaks free;
+  - breaking the alliance, including an AI betraying its own subject, ends the bond.
+- **World 1836** carries 25 subjects (ROADMAP §3.5):
+  - unions and the East India Company are puppets: Finland and Poland under Russia, Norway under Sweden, Luxembourg
+    under the Netherlands, the Company under Britain;
+  - tributaries are vassals: the Ottomans' Serbia, Wallachia, Moldavia, Tunis and Egypt; the Company's princely
+    states; Qing's Korea and Nepal; Siam's sultanates. Egypt breaks free at once, which sets up 1839;
+  - the scenario's alliances are now just the Holy and Quadruple Alliances.
+- **Coalitions:** taking other nations' provinces builds aggression (their tiles, fading by a tenth every 30 s).
+  Past 3,000 tiles, the aggressor's smaller AI neighbours ally with each other, turn hostile and target it. The
+  coalition lasts until aggression drops below half that. One point per province made every border war on 1836's
+  small provinces a coalition, so it counts tiles.
+- **Cores, revolts and civil wars:**
+  - a province becomes its owner's core after 10 minutes;
+  - when an AI nation's non-core provinces pass 30%, the biggest group taken from one nation can revolt: back to
+    that nation if it lives, or as a revived nation with its name, colour and flag;
+  - an AI nation grown past both twice its start and 15% of the land can fall into civil war: its 40% of provinces
+    farthest from its capital secede as "Free <town>";
+  - secession moves whole provinces through `conquer()`, takes a matching share of troops, and gives the new nation
+    its own AI, hostile to its parent;
+  - humans and puppets are exempt from revolts and civil wars.
+- **Sandbox:** a Subjects tool (with a nation selected, click another: vassal → puppet → free), and a Secede mode in
+  the Provinces tool. The hover line shows "(vassal of …)".
+- **Measured:**
+  - an allied pair beats a great power with 55% of the land (more than both together, 2.4× each) in 6 of 7 seeds;
+    unallied, in none;
+  - at 60/20/20 the great power wins every seed, though the alliance holds out two or three times longer;
+  - in a 5-minute World 1836 run, 9 of 25 subjects remain;
+  - the first coalition forms after about 2 minutes, against Brazil after it took 24,000 tiles; by 5 minutes 15 are
+    running, since the AI fights constantly (F7 pacing);
+  - speed with 250 nations: mean tick 5.6 ms (was 4.6), p99 17 ms, and 184 nations alive after 600 ticks (was 135).
+- **Checked:**
+  - 6 tests in `Diplomacy.test.ts`: tribute and the standing alliance; a vassal breaking free and a puppet not; a
+    coalition; a civil war splitting off whole provinces; a revolt reviving a destroyed nation; scenario subjects
+    through snapshots;
+  - `Balance.test.ts`: an allied pair wins at 55/45 in at least 3 of 5 seeds, and an unallied one doesn't;
+  - a sandbox test for the Subjects and Secede actions;
+  - in the browser: "Serbia (vassal of Ottoman Empire)", and France making Belgium its vassal.
+- **Not yet:**
+  - the AI can still betray its own subjects: protecting them needs a hook in its alliance code;
+  - humans can't demand vassalage or release nations outside the sandbox. That comes with the M14 interface.
+- **Next:** F7, the grand-strategy layer.
+
 ### F7: Grand-strategy layer
 
 - A calendar mapping turns to dates, 1836 → 2036.

@@ -56,6 +56,15 @@ export const ScenarioSchema = z.object({
   // land instead of the AI. Ignored in a sandbox, where the human observes.
   player: z.number().int().nonnegative().optional(),
   provinces: ScenarioProvincesSchema.optional(),
+  // [overlord, subject, kind] as indexes into `nations` (Diplomacy.ts).
+  subjects: z
+    .tuple([
+      z.number().int().nonnegative(),
+      z.number().int().nonnegative(),
+      z.enum(["vassal", "puppet"]),
+    ])
+    .array()
+    .optional(),
 });
 export type Scenario = z.infer<typeof ScenarioSchema>;
 

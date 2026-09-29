@@ -28,6 +28,7 @@ import { GameMapLoader } from "./game/GameMapLoader";
 import { ErrorUpdate, GameUpdateViewData } from "./game/GameUpdates";
 import { createNationsForGame } from "./game/NationCreation";
 import { loadTerrainMap as loadGameMap } from "./game/TerrainMapLoader";
+import { DiplomacyExecution } from "./overreach/DiplomacyExecution";
 import { ProvinceExecution } from "./overreach/ProvinceExecution";
 import { ProvinceViewTracker } from "./overreach/ProvinceView";
 import { ScenarioExecution } from "./overreach/ScenarioExecution";
@@ -177,7 +178,10 @@ export class GameRunner {
     if (this.game.config().gameConfig().scenario !== undefined) {
       this.game.addExecution(new ScenarioExecution(this.execManager.gameID()));
     } else if (this.game.config().gameConfig().provinces !== false) {
-      this.game.addExecution(new ProvinceExecution(this.execManager.gameID()));
+      this.game.addExecution(
+        new ProvinceExecution(this.execManager.gameID()),
+        new DiplomacyExecution(this.execManager.gameID()),
+      );
     }
     // Overreach: a sandbox needn't wait for the player to spawn.
     if (

@@ -14,6 +14,7 @@ import {
 import { GameImpl } from "../../src/core/game/GameImpl";
 import { PlayerImpl } from "../../src/core/game/PlayerImpl";
 import { GameRunner } from "../../src/core/GameRunner";
+import { DiplomacyExecution } from "../../src/core/overreach/DiplomacyExecution";
 import { ProvinceExecution } from "../../src/core/overreach/ProvinceExecution";
 import { SandboxAction } from "../../src/core/overreach/Sandbox";
 import { SandboxExecution } from "../../src/core/overreach/SandboxExecution";
@@ -382,6 +383,40 @@ describe("Sandbox", () => {
     run({ kind: "province_merge", into: p, from: east });
     expect(provinces.homeSize(p)).toBe(400);
     expect(provinces.records[p]!.capital).toBe(game.ref(15, 5));
+    expect(provinces.violation()).toBeNull();
+  });
+
+  test("diplomacy: a vassal and freeing it; a province seceding", () => {
+    game.addExecution(
+      new ProvinceExecution(gameID),
+      new DiplomacyExecution(gameID),
+    );
+    game.executeNextTick();
+    const other = playerOf("other");
+    run({ kind: "paint", tiles: block(0, 0, 30), owner: "host" });
+    run({ kind: "paint", tiles: block(50, 50, 30), owner: "other" });
+    host.setTroops(1_000_000);
+    other.setTroops(0);
+    const d = (game as GameImpl).diplomacy!;
+    run({
+      kind: "subject",
+      overlord: "host",
+      subject: "other",
+      type: "vassal",
+    });
+    expect(d.subjects).toEqual([
+      { overlord: host.smallID(), subject: other.smallID(), kind: "vassal" },
+    ]);
+    expect(host.isAlliedWith(other)).toBe(true);
+    run({ kind: "subject", overlord: "host", subject: "other", type: null });
+    expect(d.subjects).toEqual([]);
+
+    const provinces = (game as GameImpl).provinces!;
+    const p = provinces.province(game.ref(5, 5));
+    run({ kind: "secede", province: p });
+    const rebel = game.players().find((x) => x.name().startsWith("Free "));
+    expect(rebel).toBeDefined();
+    expect(provinces.records[p]!.owner).toBe(rebel!.smallID());
     expect(provinces.violation()).toBeNull();
   });
 });

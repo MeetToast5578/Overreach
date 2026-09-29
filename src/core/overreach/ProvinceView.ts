@@ -1,6 +1,7 @@
 import type { Game } from "../game/Game";
 import type { GameImpl } from "../game/GameImpl";
 import type { CityRecord } from "./Cities";
+import type { Subject } from "./Diplomacy";
 import type { ProvinceRecord, Provinces } from "./Provinces";
 
 // What the client needs to draw provinces (GameUpdateViewData.provinces):
@@ -14,11 +15,14 @@ export interface ProvinceViewUpdate {
   records?: [number, ProvinceRecord | null][];
   // Named cities by unit id, new or (null) gone; all of them with a layer.
   cities?: [number, CityRecord | null][];
+  // Every subject bond, when any changed.
+  subjects?: Subject[];
 }
 
 export class ProvinceViewTracker {
   private sent: Provinces | null = null;
   private shadow: (ProvinceRecord | null)[] = [];
+  private subjectsSent = "";
 
   next(game: Game): ProvinceViewUpdate | undefined {
     const p = (game as GameImpl).provinces;
@@ -67,7 +71,13 @@ export class ProvinceViewTracker {
         out.cities = ids.map((id) => [id, cities.records.get(id) ?? null]);
       }
     }
-    return out.layer || out.tiles || out.records || out.cities
+    const subjects = (game as GameImpl).diplomacy?.subjects ?? [];
+    const key = JSON.stringify(subjects);
+    if (key !== this.subjectsSent || out.layer) {
+      this.subjectsSent = key;
+      out.subjects = subjects.map((s) => ({ ...s }));
+    }
+    return out.layer || out.tiles || out.records || out.cities || out.subjects
       ? out
       : undefined;
   }

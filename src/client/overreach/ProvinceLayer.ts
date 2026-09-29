@@ -1,4 +1,5 @@
 import type { CityRecord } from "../../core/overreach/Cities";
+import type { Subject } from "../../core/overreach/Diplomacy";
 import type { ProvinceRecord } from "../../core/overreach/Provinces";
 import type { ProvinceViewUpdate } from "../../core/overreach/ProvinceView";
 
@@ -9,6 +10,7 @@ export class ProvinceLayer {
   readonly records: (ProvinceRecord | null)[] = [];
   // Named cities by unit id.
   readonly cities = new Map<number, CityRecord>();
+  subjects: Subject[] = [];
   // Rows changed since ProvincePass last uploaded them (empty when from > to).
   dirtyFrom = 0;
   dirtyTo: number;
@@ -41,7 +43,12 @@ export class ProvinceLayer {
       if (city) this.cities.set(id, city);
       else this.cities.delete(id);
     }
+    if (u.subjects) this.subjects = u.subjects;
     this.version++;
+  }
+
+  subjectOf(smallID: number): Subject | undefined {
+    return this.subjects.find((s) => s.subject === smallID);
   }
 
   province(tile: number): number {

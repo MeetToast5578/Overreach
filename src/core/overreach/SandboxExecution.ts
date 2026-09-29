@@ -122,6 +122,12 @@ export class SandboxExecution implements Execution {
         return this.provinces()?.rename(a.province, a.name);
       case "province_capital":
         return this.provinces()?.setCapital(a.province, a.tile);
+      case "subject":
+        return this.withPair(a.overlord, a.subject, (x, y) =>
+          (this.mg as GameImpl).diplomacy?.setSubject(x, y, a.type),
+        );
+      case "secede":
+        return this.secede(a.province);
       case "as": // resolved at intake by sandboxExec
         return;
       default:
@@ -131,6 +137,14 @@ export class SandboxExecution implements Execution {
 
   private provinces() {
     return (this.mg as GameImpl).provinces;
+  }
+
+  private secede(province: number): void {
+    const owner = this.provinces()?.records[province]?.owner ?? 0;
+    const from = this.mg.playerBySmallID(owner);
+    if (from.isPlayer()) {
+      (this.mg as GameImpl).diplomacy?.secede(from, [province], null);
+    }
   }
 
   private player(id: PlayerID): Player | null {

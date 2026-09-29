@@ -33,6 +33,7 @@ type Tool =
   | "war"
   | "peace"
   | "ally"
+  | "subject"
   | "province";
 const TOOLS: Tool[] = [
   "select",
@@ -43,10 +44,18 @@ const TOOLS: Tool[] = [
   "war",
   "peace",
   "ally",
+  "subject",
   "province",
 ];
 // The Provinces tool's modes (Provinces.ts edits).
-type ProvinceMode = "select" | "brush" | "new" | "split" | "merge" | "capital";
+type ProvinceMode =
+  | "select"
+  | "brush"
+  | "new"
+  | "split"
+  | "merge"
+  | "capital"
+  | "secede";
 const PROVINCE_MODES: ProvinceMode[] = [
   "select",
   "brush",
@@ -54,6 +63,7 @@ const PROVINCE_MODES: ProvinceMode[] = [
   "split",
   "merge",
   "capital",
+  "secede",
 ];
 type Structure = (typeof SANDBOX_STRUCTURES)[number];
 // What Undo sends back: a stroke's tiles by their previous owner, a new
@@ -408,6 +418,16 @@ export class SandboxPanel extends LitElement implements Controller {
         return;
       case "province":
         return this.useProvinceTool(tile);
+      case "subject": {
+        // Free -> vassal -> puppet -> free, under the selected nation.
+        const a = this.selectedID;
+        if (a === null || target === null || target.id() === a) return;
+        const now = provinceLayer?.subjectOf(target.smallID());
+        const mine = now?.overlord === this.game.player(a).smallID();
+        const type = !mine ? "vassal" : now.kind === "vassal" ? "puppet" : null;
+        this.send({ kind: "subject", overlord: a, subject: target.id(), type });
+        return;
+      }
       case "nation": {
         const name = this.newName.replace(NAME_CHARS, "").trim().slice(0, 40);
         if (name.length === 0) {
@@ -488,6 +508,9 @@ export class SandboxPanel extends LitElement implements Controller {
           this.send({ kind: "province_capital", province: selected, tile });
         }
         return;
+      case "secede":
+        if (here !== 0) this.send({ kind: "secede", province: here });
+        return;
     }
   }
 
@@ -520,7 +543,17 @@ export class SandboxPanel extends LitElement implements Controller {
       : translateText("sandbox.unclaimed");
     const province =
       provinceLayer?.records[provinceLayer.province(t)]?.name ?? "";
-    return `${where} · ${name}${province ? ` · ${province}` : ""}`;
+    const bond = owner.isPlayer()
+      ? provinceLayer?.subjectOf((owner as PlayerView).smallID())
+      : undefined;
+    const lord = bond ? this.game.playerBySmallID(bond.overlord) : null;
+    const subject =
+      bond && lord?.isPlayer()
+        ? ` (${translateText(`sandbox.${bond.kind}_of`, {
+            name: (lord as PlayerView).displayName(),
+          })})`
+        : "";
+    return `${where} · ${name}${subject}${province ? ` · ${province}` : ""}`;
   }
 
   private renderProvinceTool(btn: (on: boolean) => string) {
@@ -758,7 +791,13 @@ export class SandboxPanel extends LitElement implements Controller {
               ${this.share}%
             </label>`
           : nothing}
+        ${this.tool === "subject"
+          ? html`<div class="text-white/60">
+              ${translateText("sandbox.subject_hint")}
+            </div>`
+          : nothing}
         ${(this.tool === "paint" ||
+          this.tool === "subject" ||
           this.tool === "war" ||
           this.tool === "peace" ||
           this.tool === "ally") &&

@@ -49,6 +49,8 @@ export class Provinces {
   clientOverflow = false;
   // Named cities (Cities.ts), set by ProvinceExecution.
   cities: Cities | null = null;
+  // Told whenever a province changes owner (Diplomacy.ts). Not saved.
+  onOwnerChange: ((p: number, from: number, to: number) => void) | null = null;
 
   /**
    * `records[0]` is unused, and so is any slot freed by a new province that
@@ -212,7 +214,7 @@ export class Provinces {
     if (moved.length === 0) return;
     this.reindex();
     const rec = this.records[p]!;
-    if (rec.owner === 0) rec.owner = this.mostHeld(p)[0];
+    if (rec.owner === 0) this.setOwner(p, this.mostHeld(p)[0]);
     // A capital that moved goes with its tile. (Before the tiles move over:
     // a province that empties then is gone.)
     for (const q of touched) {
@@ -283,7 +285,8 @@ export class Provinces {
     return ix;
   }
 
-  private *tilesOf(p: number): Generator<TileRef> {
+  /** Province p's home tiles. */
+  *tilesOf(p: number): Generator<TileRef> {
     for (let i = this.ix().start[p]; i < this.ix().start[p + 1]; i++)
       yield this.ix().tiles[i];
   }
@@ -367,7 +370,7 @@ export class Provinces {
 
   // An unowned province goes to `owner`, and its tiles they hold come home.
   private claim(p: number, owner: number): void {
-    this.records[p]!.owner = owner;
+    this.setOwner(p, owner);
     for (const t of this.tilesOf(p))
       if (this.game.ownerID(t) === owner) this.setProv(t, p);
   }
@@ -383,21 +386,33 @@ export class Provinces {
     const [best, bestN] = this.mostHeld(p);
     const abandoned =
       this.heldBy(p, rec.owner) === 0 && !this.ix().loose.get(p)?.size;
-    if (abandoned && best === 0) rec.owner = 0;
+    if (abandoned && best === 0) this.setOwner(p, 0);
     else if (abandoned && best !== rec.owner) this.flip(p, best);
     else if (best !== rec.owner && bestN * 2 > this.homeSize(p))
       this.flip(p, best);
   }
 
-  private flip(p: number, owner: number): void {
+  /** Hands p whole to `owner`, even a new nation with no land (secession). */
+  transfer(p: number, owner: number): void {
+    if (this.records[p]) this.flip(p, owner, true);
+  }
+
+  private setOwner(p: number, owner: number): void {
+    const rec = this.records[p]!;
+    const from = rec.owner;
+    rec.owner = owner;
+    if (from !== owner) this.onOwnerChange?.(p, from, owner);
+  }
+
+  private flip(p: number, owner: number, force = false): void {
     const g = this.game;
     const rec = this.records[p]!;
     const winner = g.playerBySmallID(owner);
-    if (!winner.isPlayer() || !winner.isAlive()) return;
+    if (!winner.isPlayer() || (!force && !winner.isAlive())) return;
     const old = rec.owner;
     const loser = old === 0 ? null : g.playerBySmallID(old);
-    if (loser?.isPlayer() && winner.isFriendly(loser)) return;
-    rec.owner = owner;
+    if (!force && loser?.isPlayer() && winner.isFriendly(loser)) return;
+    this.setOwner(p, owner);
     for (const t of this.tilesOf(p)) {
       const o = g.ownerID(t);
       if (o === old && old !== 0) winner.conquer(t);

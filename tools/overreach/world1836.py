@@ -629,34 +629,41 @@ CAPITALS = {
     "OTT": "Istanbul",
 }
 
-# The Holy Alliance, the Quadruple Alliance, and the unions and vassals the
-# engine can't show yet (SANDBOX.md F6) as alliances.
+# The Holy Alliance and the Quadruple Alliance.
 ALLIANCES = [
     ("RUS", "AUS", "PRU"),
     ("GBR", "FRA", "SPA", "POR"),
-    ("RUS", "FIN"),
-    ("RUS", "POL"),
-    ("SWE", "NOR"),
-    ("NED", "LUX"),
-    ("OTT", "SER"),
-    ("OTT", "WAL"),
-    ("OTT", "MOL"),
-    ("OTT", "TUN"),
-    ("EIC", "HYD"),
-    ("EIC", "OUD"),
-    ("EIC", "MYS"),
-    ("EIC", "TRV"),
-    ("EIC", "GWA"),
-    ("EIC", "HOL"),
-    ("EIC", "BAR"),
-    ("EIC", "NAG"),
-    ("EIC", "BHO"),
-    ("EIC", "RAJ"),
-    ("GBR", "EIC"),
-    ("QNG", "KOR"),
-    ("QNG", "RYU"),
-    ("SIA", "KEL"),
-    ("SIA", "TRE"),
+]
+
+# (overlord, subject, kind), ROADMAP.md 3.5. Personal unions and the Company
+# are puppets (they never break free); tributaries are vassals, which break
+# free once strong enough: Egypt, holding the Levant, soon will.
+SUBJECTS = [
+    ("RUS", "FIN", "puppet"),
+    ("RUS", "POL", "puppet"),
+    ("SWE", "NOR", "puppet"),
+    ("NED", "LUX", "puppet"),
+    ("GBR", "EIC", "puppet"),
+    ("OTT", "SER", "vassal"),
+    ("OTT", "WAL", "vassal"),
+    ("OTT", "MOL", "vassal"),
+    ("OTT", "TUN", "vassal"),
+    ("OTT", "EGY", "vassal"),
+    ("EIC", "HYD", "vassal"),
+    ("EIC", "OUD", "vassal"),
+    ("EIC", "MYS", "vassal"),
+    ("EIC", "TRV", "vassal"),
+    ("EIC", "GWA", "vassal"),
+    ("EIC", "HOL", "vassal"),
+    ("EIC", "BAR", "vassal"),
+    ("EIC", "NAG", "vassal"),
+    ("EIC", "BHO", "vassal"),
+    ("EIC", "RAJ", "vassal"),
+    ("QNG", "KOR", "vassal"),
+    ("QNG", "NEP", "vassal"),
+    ("QNG", "RYU", "vassal"),
+    ("SIA", "KEL", "vassal"),
+    ("SIA", "TRE", "vassal"),
 ]
 
 # Town positions (lon, lat) where the World map's coast is off: it draws

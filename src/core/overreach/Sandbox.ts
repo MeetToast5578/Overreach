@@ -147,6 +147,15 @@ export const SandboxActionSchema = z.discriminatedUnion("kind", [
     province: ProvinceIDSchema,
     tile: TileSchema.nullable(),
   }),
+  // Diplomacy (Diplomacy.ts): make `subject` a vassal or puppet of
+  // `overlord` (null frees it), or have a province break away as a nation.
+  z.object({
+    kind: z.literal("subject"),
+    overlord: PlayerIDSchema,
+    subject: PlayerIDSchema,
+    type: z.enum(["vassal", "puppet"]).nullable(),
+  }),
+  z.object({ kind: z.literal("secede"), province: ProvinceIDSchema }),
   // Runs `intent` as `player`. The intent is checked against IntentSchema
   // when it arrives (sandboxExec), not here, to keep Schemas.ts out of this file.
   z.object({

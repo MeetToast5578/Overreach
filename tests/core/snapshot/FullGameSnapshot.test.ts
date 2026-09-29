@@ -173,12 +173,14 @@ describe.each(VARIANTS)("full game snapshots: %s", (_, overrides) => {
       // tests/overreach/Sandbox.test.ts round-trips it directly.
       // OverreachScenario only exists in scenario games, for their first tick;
       // tests/overreach/Scenario.test.ts round-trips it.
-      // OverreachProvinces is off in this variant; the other two restore it.
+      // OverreachProvinces and OverreachDiplomacy are off in this variant;
+      // the other two restore them.
       const neverStored = new Set([
         "Pause",
         "OverreachSandbox",
         "OverreachScenario",
         "OverreachProvinces",
+        "OverreachDiplomacy",
       ]);
       const missing = EXECUTION_SNAPSHOT_TYPES.map((t) => t.name).filter(
         (name) => !reference.execTypes.has(name) && !neverStored.has(name),

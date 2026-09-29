@@ -279,6 +279,8 @@ def scenario(owner, tags):
         "mapSize": "Normal",
         "nations": nations,
         "alliances": alliances,
+        "subjects": [[order[o] - 1, order[s] - 1, kind] for o, s, kind in data.SUBJECTS
+                     if o in order and s in order],
         "owners": runs_of(remap[owner]),
     }, empty
 

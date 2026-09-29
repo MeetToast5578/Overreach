@@ -18,6 +18,7 @@ import type {
   SnapshotWriter,
 } from "../snapshot/SnapshotContext";
 import { placeCity } from "./Cities";
+import { DiplomacyExecution } from "./DiplomacyExecution";
 import { ProvinceExecution } from "./ProvinceExecution";
 import { forEachOwnedTile } from "./Scenario";
 
@@ -112,7 +113,10 @@ export class ScenarioExecution implements Execution {
     }
     g.endSpawnPhase();
     if (g.config().gameConfig().provinces !== false) {
-      g.addExecution(new ProvinceExecution(this.gameID));
+      g.addExecution(
+        new ProvinceExecution(this.gameID),
+        new DiplomacyExecution(this.gameID),
+      );
     }
   }
 

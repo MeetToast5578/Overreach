@@ -6,6 +6,7 @@ import {
   SharedWaterCache,
   SharedWaterCacheSnapshot,
 } from "../execution/nation/SharedWaterCache";
+import type { Diplomacy } from "../overreach/Diplomacy";
 import type { Provinces } from "../overreach/Provinces";
 import { AbstractGraph } from "../pathfinding/algorithms/AbstractGraph";
 import { WaterPathFinder } from "../pathfinding/PathFinder";
@@ -116,6 +117,7 @@ export class GameImpl implements Game {
   private execs: Execution[] = [];
   // Overreach: told of every ownership change (set by ProvinceExecution).
   provinces: Provinces | undefined;
+  diplomacy: Diplomacy | undefined; // Overreach, set by DiplomacyExecution
   private _width: number;
   private _height: number;
   _terraNullius: TerraNulliusImpl;
