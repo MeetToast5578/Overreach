@@ -31,6 +31,8 @@ Don't do these without the owner's go-ahead.
 
 ## Next work, in suggested order
 
+**Superseded (30 Sep 2026) by `MASTERPLAN.md`**, whose §9 says where each item below went.
+
 1. **Too many wars.** 218 were open by 1846, mostly coalition members' and small skirmishes'. The knobs are in
    `Diplomacy.ts`:
    - `WAR_CHANCE`: 1 in 4 per AI nation per year;

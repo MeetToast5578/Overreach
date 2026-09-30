@@ -88,7 +88,7 @@ Tests use a `setup()` helper from `tests/util/Setup.ts` that creates a full game
 
 ## Overreach fork
 
-This repo is **Overreach**, a fork of OpenFront (AGPL-3.0). The plan is `SANDBOX.md` (F0–F8); `ROADMAP.md` §3
+This repo is **Overreach**, a fork of OpenFront (AGPL-3.0). The plan is `MASTERPLAN.md` (G0–G10), after `SANDBOX.md` (F0–F8, done); `ROADMAP.md` §3
 holds the 1836 world data. `legacy/` is the pre-fork engine, read-only.
 
 - Our code lives in `src/core/overreach/`, `src/client/overreach/`, `tests/overreach/`. Changes to upstream files are
