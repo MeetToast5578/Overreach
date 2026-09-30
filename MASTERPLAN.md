@@ -432,8 +432,13 @@ one commit per slice.
   saves. A loaded game starts a new worker from the snapshot; `LocalServer` numbers its next turn from the saved tick.
   Checked in Chrome: France saved on 30 April 1836, continued with the same 33,017 tiles and kept running.
 - **Hotkeys:** OpenFront's pause and speed keys stay (they're in Settings).
-- **Still to do in G2:** the new-game screen (start date card, nation picking on the map), an alerts row and the event
-  window's new look, and tooltips that break numbers down.
+- **New-game page** (`NewGame.ts`, `#modal=new-game`; the title's New game button): the 1836 bookmark card, a preview
+  map of the scenario drawn from its province owners (`previewGrid`), nation picking by click with a hover card (flag,
+  name, land, rank), a great-powers list, and "Play as {nation}". It starts the game by dispatching `join-lobby` with the
+  scenario and the picked nation. **Written and unit-tested (`tests/overreach/NewGame.test.ts`), tsc and eslint clean,
+  the static site rebuilt with it, but never opened in a browser.** Check it first.
+- **Still to do in G2:** the browser check above, an alerts row and the event window's new look, and tooltips that
+  break numbers down.
 
 - **Done when:** you can start 1836 as Prussia by clicking it, read any province and nation, switch map modes, save in
   1840 and load it, and never see an OpenFront menu.

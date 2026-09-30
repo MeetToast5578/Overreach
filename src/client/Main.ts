@@ -29,6 +29,7 @@ import "./components/Footer";
 import "./components/MainLayout";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
+import "./overreach/NewGame";
 import { setCurrentGame } from "./overreach/Saves";
 import "./overreach/Title";
 import "./overreach/overreach.css";
@@ -103,6 +104,10 @@ class Client {
     modalRouter.register("language", {
       tag: "language-modal",
       pageId: "page-language",
+    });
+    modalRouter.register("new-game", {
+      tag: "overreach-newgame",
+      pageId: "page-new-game",
     });
     modalRouter.register("single-player", {
       tag: "single-player-modal",

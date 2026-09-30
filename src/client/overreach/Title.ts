@@ -80,7 +80,7 @@ export class OverreachTitle extends LitElement {
                 ${translateText("title_screen.continue")}
               </button>`
             : nothing}
-          <a class=${button} href="#modal=single-player">
+          <a class=${button} href="#modal=new-game">
             ${translateText("title_screen.new_game")}
           </a>
           <a class=${button} href="#modal=single-player&tab=sandbox">

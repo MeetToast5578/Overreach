@@ -9,17 +9,24 @@ pre-fork engine; it's read-only.
 
 ## State
 
-- **Plan:** F0–F8 and G0, G1 are done. **Next is G2**, the grand-strategy shell (title screen with start dates, nation
-  picking on the map, top bar, province and nation windows, map modes, save and load).
+- **Plan:** F0–F8 and G0, G1 are done. **G2 (the grand-strategy shell) is mostly done.** Built and checked in Chrome:
+  left-click selection, top bar, province and nation windows, outliner, curved country names, five map modes, save and
+  load. Built but **never opened in a browser: the new-game page with nation picking** (`overreach/NewGame.ts`).
+  Left: that browser check, an alerts row, the event window's look, and tooltips with breakdowns. Then G3.
 - **Not pushed:** `main` is ahead of `origin` (`MeetToast5578/Overreach`, private). The owner allowed commits, not pushes.
+  They said (30 Sep 2026) to automate everything since it's a private project with nothing to lose; that covered local
+  commits and builds. Pushing, deploying and going public were never done or authorized.
 - **The client is single-player only.** OpenFront's home page, lobbies, accounts, store, clans and ads are deleted
-  (G0). `overreach/Title.ts` is a stopgap title screen. The server in `src/server/` still exists for multiplayer (G10).
+  (G0). `overreach/Title.ts` is the title screen (Continue, New game, Sandbox, Help, Settings, saved games). The server
+  in `src/server/` still exists for multiplayer (G10).
 - **One map:** Earth, 7,680 × 2,944 (6.9M land tiles). OpenFront's other 132 maps are deleted. `tests/testdata/maps/`
   keeps small copies for the tests.
 - **Tests:** the whole suite passes except `tests/UpdateRegister.test.ts` (needs `jq`). `tests/overreach` has 85 tests
   (~30 s); `FullGameSnapshot` is slow (~2.5 min).
-- **Play it:** `npm run dev`, then New game → "World 1836" → "Your nation" → Start. Sandbox is the other tab.
-  `npm run build-static` writes `static-site/` (95 MB, 1,488 files), which runs with no game server.
+- **Play it:** `npm run dev`, then New game → click a nation on the map → Play as. Sandbox is on the title screen.
+  `npm run build-static` writes `static-site/` (95 MB, 1,488 files), which runs with no game server. It's up to date
+  with the new-game page. No server is running now; start one with
+  `cd static-site; python -m http.server 9100` (PowerShell `Start-Process`, and keep the PID to stop it later).
 
 ## Waiting on the owner
 
@@ -52,8 +59,16 @@ Each takes about a minute. `--width` on the first changes the map's size; the se
 
 ## Next work
 
-1. **G2** (see `MASTERPLAN.md` §4 and G2). Two loose ends it should tidy: nation name boxes with troop counts overlap the
-   province names, and country names should be drawn along a curve.
+1. **Finish G2** (`MASTERPLAN.md` G2 status has the list):
+   - **Browser-check the new-game page first.** The script I was about to run: open the site, click New game
+     (`overreach-title a[href="#modal=new-game"]`), wait for the `#ov-newgame-map` canvas, hover and
+     click Prussia on the preview (map position = lon/lat on the 360° × 138° equirectangular frame, lat 80°N at the
+     top), confirm the button says "Play as Prussia", press it, and confirm the game starts as that nation
+     (`document.querySelector("build-menu").game.myPlayer().name()`). Screenshots of hover and pick go in a scratch folder.
+     Things likely to be off: preview resolution and click mapping, hover card placement, start-up time of the preview.
+   - Then the **alerts row** (a formable is ready, an event waits, a coalition forms, a truce ends), the **event window**
+     restyle (`StoryPanel.ts`), and **tooltips that break numbers down** (top bar first).
+   - Run `npx tsc --noEmit`, `npm run lint`, the tests, update the G2 status, commit.
 2. **G3, war and peace** (occupation, war score, peace deals), which also fixes the "too many wars" problem: 218 wars were open
    by 1846. `Diplomacy.ts` holds the knobs (`WAR_CHANCE`, `PEACE_TICKS`), but they get replaced.
 3. Then G4–G10 in `MASTERPLAN.md`'s order. The old `SANDBOX.md` F6 leftovers (the AI betraying its own subjects, humans
@@ -70,13 +85,17 @@ Each takes about a minute. `--width` on the first changes the map's size; the se
   - `OverreachIntent`: the player's `form` and `event` answers;
   - `Sandbox`, `SandboxExecution`: god-mode edits.
 - **Client (`src/client/overreach/`):**
-  - `Title`: the stopgap title screen;
-  - `ScenarioFile`: the built-in list, the nation picker, save and load;
-  - `ProvinceLayer`, `ProvincePass`: borders and labels;
+  - `Title`, `NewGame`: the title screen and the new-game page (`previewGrid` draws the owners map, `start()` builds the
+    `gameStartInfo` and dispatches `join-lobby`);
+  - `ScenarioFile`: the built-in list and scenario loading;
+  - `Saves`: save, list, delete, load (core snapshot, gzipped, in IndexedDB) and `setCurrentGame`;
+  - `Selection`: the selection store and left-click-selects; `SelectionWindow`, `Outliner`, `TopBar`, `DateText`;
+  - `CountryNames` (curved names), `MapMode` and `MapModes` (palettes and legends);
+  - `ProvinceLayer`, `ProvincePass`: borders, labels, centroids and the map-mode pass;
   - `SandboxPanel`;
-  - `CalendarBar`, `StoryPanel`: the date, event cards and form buttons;
+  - `CalendarBar`, `StoryPanel`: event cards and form buttons (the date moved to `TopBar`);
   - `Renames`, `EndingTitle`, `StaticSite`;
-  - `Layers`: plugs the rest into `GameRenderer`.
+  - `Layers`: plugs the rest into `GameRenderer` (adds the `overreach-gsg` body class, which hides OpenFront's left sidebar).
 - **Client files from OpenFront that remain:** `Main.ts` (a single-player rewrite), `SinglePlayerModal`, `ClientGameRunner`,
   `LocalServer`, `Transport`, `hud/`, `render/`, the settings and help modals. `Api`, `Auth`, `ServerList` and the CrazyGames
   and Steam wrappers stay because the game path imports them; they can go with multiplayer.

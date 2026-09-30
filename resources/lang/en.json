@@ -767,6 +767,17 @@
     "seconds": "seconds",
     "warning": "Vigilant Mode Warning"
   },
+  "newgame": {
+    "bookmark_1836": "1 January 1836",
+    "bookmark_1836_text": "An age of revolutions and steam. Britain leads an industrial world, Russia, Austria and Prussia hold Europe together, the Ottoman Empire is failing, and the Americas, India and Africa are being divided.",
+    "failed": "Couldn't load the world.",
+    "great_powers": "Great powers and large states",
+    "land": "Land",
+    "loading": "Loading the world…",
+    "rank": "Rank by land",
+    "start": "Play as {nation}",
+    "title": "New game"
+  },
   "new_lobby_prompt": {
     "confirm": "Start a new lobby? All players will be invited to join.",
     "dismiss": "Dismiss",
