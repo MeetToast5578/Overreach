@@ -77,6 +77,7 @@ async function world(fill: (g: Game) => void) {
       owner: 0,
       capital: null,
       population: 1_000_000,
+      growth: 1000,
     });
   }
   const provinces = new Provinces(game, home, records);
@@ -106,10 +107,14 @@ describe("Economy", () => {
     );
   });
 
-  test("towns grow a percent a year", async () => {
+  test("towns grow at their province's own rate", async () => {
     const { game, provinces } = await world(() => {});
+    provinces.records[2]!.growth = 500; // half a percent
+    provinces.records[3]!.growth = 2500;
     grow(game);
     expect(provinces.records[1]!.population).toBe(1_010_000);
+    expect(provinces.records[2]!.population).toBe(1_005_000);
+    expect(provinces.records[3]!.population).toBe(1_025_000);
   });
 });
 

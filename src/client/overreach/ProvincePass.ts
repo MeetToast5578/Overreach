@@ -62,8 +62,11 @@ const BORDER_ALPHA = 0.5;
 // CSS pixels per tile): 500k at 2, 31k at 8 (1836 people). A province
 // without a town counts TILE_PEOPLE per tile, so it shows once it's about
 // 45 px across.
+// Both are for a 2000-wide map; a wider one has smaller tiles, so they scale
+// by (2000 / its width)² and the same stretch of the world shows the same names.
 const TOWN_POP = 2_000_000;
 const TILE_PEOPLE = 1_000;
+const REF_MAP_WIDTH = 2000;
 const MAX_NAMES = 300;
 const CENTROID_EVERY_MS = 1000;
 
@@ -176,7 +179,8 @@ export class ProvincePass {
     zoom: number,
   ): AttackTroopLabel[] {
     const css = zoom / renderDpr();
-    const minPop = TOWN_POP / (css * css);
+    const scale = (REF_MAP_WIDTH / this.mapW) ** 2;
+    const minPop = (TOWN_POP * scale) / (css * css);
     this.updateCentroids(layer);
     // The visible world: clip space [-1, 1] back through the camera.
     const xs = [(-1 - m[6]) / m[0], (1 - m[6]) / m[0]];
@@ -194,7 +198,7 @@ export class ProvincePass {
       const rec = layer.records[id];
       const tiles = this.count[id];
       if (!rec || tiles === 0) continue;
-      const people = tiles * TILE_PEOPLE;
+      const people = tiles * TILE_PEOPLE * scale;
       if (rec.capital === null) {
         add(this.cx[id] / tiles, this.cy[id] / tiles, rec.name, people);
       } else {

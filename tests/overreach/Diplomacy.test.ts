@@ -46,7 +46,13 @@ async function world(owners: (game: Game) => void, calendar = false) {
   }
   const records: (ProvinceRecord | null)[] = [null];
   for (let k = 1; k <= 100; k++) {
-    records.push({ name: `P${k}`, owner: 0, capital: null, population: 0 });
+    records.push({
+      name: `P${k}`,
+      owner: 0,
+      capital: null,
+      population: 0,
+      growth: 1000,
+    });
   }
   const provinces = new Provinces(game, home, records);
   (game as GameImpl).provinces = provinces;

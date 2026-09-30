@@ -122,3 +122,13 @@ Guild icon by Trimanggolo Mulyo – https://thenounproject.com/icon/guild-826614
 
 [Wikimedia Commons](https://commons.wikimedia.org/wiki/Flag)
 Licensed under [CC BY-SA 3.0 DE](https://creativecommons.org/licenses/by-sa/3.0/de/deed.en)
+
+## Overreach data
+
+The Earth map and the World 1836 scenario are built from these (`tools/overreach/`):
+
+- **NOAA ETOPO 2022** (elevation): NOAA National Centers for Environmental Information. 2022: ETOPO 2022 60 Arc-Second Global Relief Model. [doi:10.25921/fd45-gt74](https://doi.org/10.25921/fd45-gt74). Public domain.
+- **Natural Earth II with Shaded Relief** (the painted terrain layer) and the Natural Earth vectors and GeoNames-matched land mask: [Natural Earth](https://www.naturalearthdata.com/). Public domain.
+- **historical-basemaps** (1815 borders): [aourednik/historical-basemaps](https://github.com/aourednik/historical-basemaps). GPL-3.0, so the World 1836 scenario is GPL-3.0 too.
+- **Population by country** (1836 and 2020): [Our World in Data](https://ourworldindata.org/grapher/population), built on the HYDE 3.3 database (Klein Goldewijk et al., Utrecht University and PBL), Gapminder and the UN. CC BY 4.0.
+- **GeoNames** (towns of 15,000 or more): [geonames.org](https://www.geonames.org/). CC BY 4.0.

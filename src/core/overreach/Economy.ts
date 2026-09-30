@@ -2,21 +2,20 @@ import type { Game } from "../game/Game";
 import type { GameImpl } from "../game/GameImpl";
 
 // The province economy (Overreach, SANDBOX.md F7), in a game with a calendar:
-// a province's town grows GROWTH_PERCENT a year, and its people pay their
+// a province's town grows by its own rate a year, and its people pay their
 // owner, on top of OpenFront's own income, a gold a tick for every
 // PEOPLE_PER_GOLD (half from a province that isn't its owner's core yet).
 // Integer maths throughout, so every client agrees.
 
-export const GROWTH_PERCENT = 1;
 export const PEOPLE_PER_GOLD = 50_000;
 export const PAY_EVERY = 10; // ticks
 
-/** A year's growth for every town. */
+/** A year's growth for every town, at the rate its province carries. */
 export function grow(game: Game): void {
   const provinces = (game as GameImpl).provinces;
   for (const rec of provinces?.records ?? []) {
     if (rec && rec.population > 0) {
-      rec.population += Math.floor((rec.population * GROWTH_PERCENT) / 100);
+      rec.population += Math.floor((rec.population * rec.growth) / 100_000);
     }
   }
 }

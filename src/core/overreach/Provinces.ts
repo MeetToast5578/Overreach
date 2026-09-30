@@ -18,6 +18,8 @@ import type { Cities } from "./Cities";
 // in the middle of conquering.
 
 export const MAX_PROVINCES = 65535;
+// A town's yearly growth when a scenario gives none: 1%, in hundred-thousandths.
+export const GROWTH_DEFAULT = 1000;
 
 export interface ProvinceRecord {
   name: string;
@@ -25,6 +27,8 @@ export interface ProvinceRecord {
   capital: TileRef | null;
   // Its town's people (0 if unknown); a city there starts with them.
   population: number;
+  // How fast they grow each year, in hundred-thousandths (1000 is 1%).
+  growth: number;
 }
 
 interface ProvinceIndex {
@@ -148,7 +152,13 @@ export class Provinces {
 
   /** A new province of these tiles, owned by whoever holds most of them. */
   create(tiles: TileRef[], name: string): number {
-    const p = this.newRecord({ name, owner: 0, capital: null, population: 0 });
+    const p = this.newRecord({
+      name,
+      owner: 0,
+      capital: null,
+      population: 0,
+      growth: GROWTH_DEFAULT,
+    });
     if (p === 0) return 0;
     this.setHome(tiles, p);
     if (this.homeSize(p) > 0) return p;
@@ -350,7 +360,13 @@ export class Provinces {
     const name = home?.name ?? (player.isPlayer() ? player.name() : "");
     // ponytail: 65,535 ids; past that a loose tile stays at home, breaking
     // the owner rule. Recycle harder if a game ever gets there.
-    const rec = { name, owner, capital: null, population: 0 };
+    const rec = {
+      name,
+      owner,
+      capital: null,
+      population: 0,
+      growth: GROWTH_DEFAULT,
+    };
     return this.newRecord(rec) || this.home[t];
   }
 
@@ -502,6 +518,7 @@ export function generateProvinces(
       owner: 0,
       capital: null,
       population: 0,
+      growth: GROWTH_DEFAULT,
     });
     queue[tail++] = t;
     return true;

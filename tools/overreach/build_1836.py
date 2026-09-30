@@ -282,6 +282,28 @@ def runs_of(grid):
     return runs.tolist()
 
 
+WORLD_RATIO = 0.137  # 1836's share of today's world, for countries without a population series
+YEARS = 200  # 1836 -> 2036, which the calendar plays in 200 years
+
+
+def population_ratios(path):
+    """ISO3 -> (1836 people / 2020 people), from Our World in Data's population series (HYDE-based,
+    CC BY): a town starts at today's size times its country's ratio, and grows back to today's by 2036."""
+    import csv
+
+    rows = {}
+    with open(path, encoding="utf-8") as f:
+        for r in csv.DictReader(f):
+            if r["code"] and r["year"] in ("1836", "2020"):
+                rows.setdefault(r["code"], {})[r["year"]] = int(float(r["population_historical"]))
+    return {c: v["1836"] / v["2020"] for c, v in rows.items() if "1836" in v and v.get("2020")}
+
+
+def growth_for(ratio):
+    """A yearly growth, in hundred-thousandths, that takes `ratio` back to 1 in YEARS years."""
+    return min(3000, max(0, round((ratio ** (-1 / YEARS) - 1) * 100_000)))
+
+
 MIN_PIECE = 24  # tiles, about 650 km2 on the Earth map
 
 
@@ -343,19 +365,8 @@ def provinces(args, g, owner):
         i = home[at[1], at[0]] if at else 0
         if i and (i not in towns or rank(city) > rank(towns[i][0])):
             towns[i] = (city, at)
-    names, capitals, populations = [], [], []
-    for i, root_pc in enumerate(ids[1:], 1):
-        best = towns.get(i)
-        sub = legacy[int(legacy_of[root_pc])]["sub"]
-        names.append(best[0]["name"] if best else subs.get(sub, f"Province {i}"))
-        capitals.append(best[1][1] * W + best[1][0] if best else None)
-        # 1836 people: today's (GeoNames) times 1836's share of today's world,
-        # ~1.1 of 8 billion; the calendar grows them 1% a year back to about
-        # today's by 2036. ponytail: one factor for the world; ROADMAP 3.6
-        # scales each country to its own 1836 total.
-        populations.append(best[0]["pop"] * 137 // 1000 if best else 0)
-    # Each province's modern country (most of its tiles), the homelands of
-    # formable nations (Formables.ts): Germany is the provinces in DEU.
+    # Each province's modern country (most of its tiles): the homelands of formable nations
+    # (Formables.ts: Germany is the provinces in DEU), and the ratio that scales its people to 1836.
     vals, counts = np.unique((home.astype(np.int64) * 1024 + g.a3)[home > 0], return_counts=True)
     most = {}
     for v, c in zip(vals.tolist(), counts.tolist()):
@@ -363,8 +374,22 @@ def provinces(args, g, owner):
         if c > most.get(pid, (0, 0))[0]:
             most[pid] = (c, a)
     code = {i: a3 for a3, i in g.a3_id.items()}
-    countries = [code.get(most[i][1], "") if i in most else "" for i in range(1, len(names) + 1)]
-    return {"names": names, "capitals": capitals, "populations": populations,
+    countries = [code.get(most[i][1], "") if i in most else "" for i in range(1, len(ids))]
+    ratios = population_ratios(args.population)
+    names, capitals, populations, growth = [], [], [], []
+    for i, root_pc in enumerate(ids[1:], 1):
+        best = towns.get(i)
+        if best and data.FOUNDED.get(best[0]["name"], 0) > 1836:
+            best = None  # not founded yet: the province takes its region's name
+        sub = legacy[int(legacy_of[root_pc])]["sub"]
+        names.append(data.NAMES_1836.get(best[0]["name"], best[0]["name"]) if best
+                     else subs.get(sub, f"Province {i}"))
+        capitals.append(best[1][1] * W + best[1][0] if best else None)
+        # 1836 people: today's (GeoNames) times the country's 1836 share of its 2020 people.
+        ratio = ratios.get(countries[i - 1], WORLD_RATIO)
+        populations.append(int(best[0]["pop"] * ratio) if best else 0)
+        growth.append(growth_for(ratio))
+    return {"names": names, "capitals": capitals, "populations": populations, "growth": growth,
             "countries": countries, "home": runs_of(home)}, home
 
 
@@ -382,7 +407,8 @@ def nation_capitals(out, owner, tags):
         if not mine:
             continue
         want = data.CAPITALS.get(tag)
-        if tag in data.CAPITALS and want is None:
+        want = data.NAMES_1836.get(want, want)
+        if tag in data.CAPITALS and data.CAPITALS[tag] is None:
             continue
         pick = next((t for t in mine if t[0] == want), None)
         if want and pick is None:
@@ -423,6 +449,8 @@ def main():
     ap.add_argument("--geojson", required=True)
     ap.add_argument("--map", default="earth", help="a folder of resources/maps (built by build_earth.py)")
     ap.add_argument("--out", default=os.path.join(REPO, "resources/scenarios/world-1836.json"))
+    ap.add_argument("--population", default=os.path.join(REPO, "tools/overreach/data/owid_population.csv"),
+                    help="Our World in Data population.csv (csvType=full), for each country's 1836 people")
     ap.add_argument("--preview")
     ap.add_argument("--polities", action="store_true", help="list 1815 polities with their centres and exit")
     args = ap.parse_args()

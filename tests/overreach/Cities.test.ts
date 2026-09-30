@@ -44,13 +44,20 @@ async function towns() {
     home[t] = Math.floor(game.x(t) / 10) + 1;
   const records: (ProvinceRecord | null)[] = [null];
   for (let k = 1; k <= 10; k++) {
-    records.push({ name: `P${k}`, owner: 0, capital: null, population: 0 });
+    records.push({
+      name: `P${k}`,
+      owner: 0,
+      capital: null,
+      population: 0,
+      growth: 1000,
+    });
   }
   records[2] = {
     name: "Townsby",
     owner: 0,
     capital: game.ref(15, 50),
     population: 80_000,
+    growth: 1000,
   };
   const provinces = new Provinces(game, home, records);
   const cities = new Cities(game, provinces);

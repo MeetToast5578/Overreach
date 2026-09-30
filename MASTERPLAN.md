@@ -30,7 +30,7 @@ Written 30 September 2026, after F0–F8 (`SANDBOX.md`). This file sets the orde
 | #   | Decision                  | Default                                                                                                                                                                                                                                                                                                                       | Alternative                                                                              |
 | --- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
 | 1   | What we keep of OpenFront | **The engine:** `src/core`, the WebGL renderer, the worker, `LocalServer`, the server (for multiplayer later) and the map generator. Their shell (home page, store, accounts, clans, ranked, ads, Steam, cosmetics, news, streams: about 100 files, 33k of the client's 121k lines) and 129 of their 130 maps get **deleted** | Keep hiding them: cheap merges, but the dead code stays and the static site stays 638 MB |
-| 2   | Base map                  | Our own **Earth** map: 5,632 × 2,160 tiles, equirectangular from 80°N to 58°S, built from Natural Earth and ETOPO. About 3.8M land tiles, 5.8× today's                                                                                                                                                                        | 5,120 (3.1M) or 6,144 (4.5M) wide, picked by G1's speed test                             |
+| 2   | Base map                  | Our own **Earth** map: **7,680 × 2,944** tiles, equirectangular from 80°N to 58°S, built from Natural Earth and ETOPO. 6.9M land tiles, 10.6× today's, at the native resolution of our province raster. Measured in G1; the width is one flag of `build_earth.py`                                                             | 5,632 (3.7M land) if a weak GPU struggles with the big textures                          |
 | 3   | Conquest                  | Provinces taken in a war are **occupied**. They change owner only in the peace treaty                                                                                                                                                                                                                                         | OpenFront's instant ownership (today)                                                    |
 | 4   | Clicks                    | Left click selects (province and nation windows); right click opens the action wheel (attack, boat, build, diplomacy)                                                                                                                                                                                                         | OpenFront's left-click attack, kept as a setting either way                              |
 | 5   | Genre anchor              | Victoria-style systems with an EU4-style interface. Monarch points and estates stay out (`legacy/HANDOFF.md` §2)                                                                                                                                                                                                              | EU4-style systems                                                                        |
@@ -61,8 +61,9 @@ The candidates, with land tiles measured on the legacy 7,680 × 3,840 terrain ra
 | OpenFront World (today)    | 2000 × 1000 | 0.65M      | 1       | ~60    | ~10        |                                                                                                                           |
 | OpenFront Giant World      | 4108 × 1948 | 2.34M      | 3.6     |        |            | In the repo and played online, but its manifest has no geographic bounds, so every dataset would first need fitting to it |
 | Earth 5120, 80°N–58°S      | 5120 × 1963 | 3.1M       | 4.8     | ~380   | ~65        | Right at the map generator's recommended maximum of 3M land tiles                                                         |
-| **Earth 5632, 80°N–58°S**  | 5632 × 2160 | 3.8M       | 5.8     | ~460   | ~80        | EU4's map is also 5,632 wide. Hamburg gets ~12 tiles, Frankfurt a few                                                     |
-| Earth 6144, 80°N–58°S      | 6144 × 2355 | 4.5M       | 6.9     | ~550   | ~95        |                                                                                                                           |
+| Earth 5632, 80°N–58°S      | 5632 × 2160 | 3.7M       | 5.7     | ~460   | ~80        | EU4's map is also 5,632 wide. Built and measured in G1: 9.2 ms a tick, 188 MB heap in Chrome                              |
+| Earth 6144, 80°N–58°S      | 6144 × 2356 | 4.4M       | 6.7     | ~550   | ~95        | Measured in G1: 10.1 ms a tick                                                                                            |
+| **Earth 7680, 80°N–58°S**  | 7680 × 2944 | 6.9M       | 10.6    | ~690   | ~120       | **Chosen.** Measured in G1: 12.4 ms a tick, 305 MB heap in Chrome, loads in 11 s                                          |
 | Legacy raster, whole globe | 7680 × 3840 | 9.9M       | 15      |        |            | 3× the recommended maximum. Antarctica alone is ~3M tiles                                                                 |
 
 - **"The largest and most detailed" is limited by tile count, not by the source.** Natural Earth's 1:10m land and lakes
@@ -354,12 +355,52 @@ one commit per slice.
    (`ScenarioPerf`), load time, memory and frame rate in Chrome. Take the biggest that holds a mean tick under 15 ms, a
    p99 under 50 ms and 30 fps on this machine.
 2. `build_earth.py`, the relief layer, and the terrain-type and river layers (data only).
-3. `build_1836.py` for any map bounds; provinces cut by every start date's borders; HYDE population; historical names and
-   founding dates.
+3. `build_1836.py` for any map bounds; provinces cut by every start date's borders; population by country; historical
+   names and founding dates.
 4. World 1836 moves to Earth. Then delete OpenFront's other maps; the static site drops to ~50 MB.
 
 - **Done when:** the 136 town checks pass on Earth, Hamburg, Frankfurt and Luxembourg are visible, and you sign off
   Europe, the Americas, India and Africa on screen. This replaces F3's pending sign-off.
+
+**Status (30 Sep 2026): built; the on-screen sign-off is yours. Three items moved, see the end of this block.**
+
+- **The map is 7,680 × 2,944, not 5,632.** The speed test said bigger still holds (250 nations, Node, 300 ticks):
+
+  | Wide         | Land tiles | Mean tick | p99     | Chrome: first ticks | Heap (Chrome) |
+  | ------------ | ---------- | --------- | ------- | ------------------- | ------------- |
+  | 2000 (World) | 0.65M      | 4.7 ms    | 13.5 ms |                     |               |
+  | 5632         | 3.7M       | 9.2 ms    | 26 ms   | 9 s, 9.6 ticks/s    | 188 MB        |
+  | 6144         | 4.4M       | 10.1 ms   | 26 ms   |                     |               |
+  | 7680         | 6.9M       | 12.4 ms   | 30 ms   | 11 s, 9.5 ticks/s   | 305 MB        |
+
+  World 1836 itself (181 nations, all systems) runs at 13 ms mean and 41 ms p99 in Node. In headless Chrome on a
+  software renderer it starts in 22 s and holds 5 ticks a second, 623 MB of heap; a real GPU should do better, but that
+  is unmeasured here. **The risk I couldn't test is GPU memory on weak machines** (map-size textures of 22M pixels).
+  If it bites, `build_earth.py --width 5632` and `build_1836.py` rebuild everything in about two minutes.
+
+- **Earth** (`tools/overreach/build_earth.py`, `earthgeo.py`): land and water from the legacy Natural Earth raster,
+  elevation from NOAA ETOPO 2022 mapped to OpenFront's terrain key, the Greenland ice sheet impassable, ten sea links
+  checked open (plus seven narrow straits carved: Bosphorus, Dardanelles, Kerch, Øresund, Messina, Bonifacio, Johor), and
+  a painted relief layer from Natural Earth II (16 MB). Inputs live in `tools/overreach/data/` (git-ignored): the ETOPO
+  GeoTIFF, the NE2 zip, `world_1815.geojson`, and OWID's `population.csv`. `CREDITS.md` lists the sources.
+- **World 1836 on Earth** (`build_1836.py --map earth`): 181 nations (Samoa, Tahiti and Ryukyu now get land; Tonga still
+  doesn't), 5,837 provinces, 136 of 136 town checks. Germany's and Italy's states are finally visible.
+- **Population by country:** a town starts at today's size times its country's 1836 ÷ 2020 people (Our World in Data's
+  HYDE-based series), and grows at a rate that returns it to today's by 2036: each province now has a `growth` (in
+  hundred-thousandths a year; France 0.33%, Nigeria 1.4%). HYDE's own files sit behind a proof-of-work bot wall, so
+  OWID's country series did the job; per-province HYDE grids are not needed unless a region looks wrong.
+- **Names:** 80 towns carry their 1836 name (Constantinople, Bombay, Edo, Danzig, Saigon...), and 72 towns
+  founded later (Johannesburg, Nairobi, Vladivostok...) start as a region with no town. G7 brings them in on their dates.
+- **OpenFront's other 132 maps are deleted**, with the map list regenerated, so Earth is the only map. The server's
+  playlist, its tests and ~60 test files now name Earth. The static site is 95 MB in 1,488 files (was 638 MB).
+- **Town labels** scale with the map width, so the same stretch of the world shows the same names as on the old map.
+- **Moved:**
+  - provinces cut by every start date's borders → G8, which has to re-cut them once for all start dates anyway (their ids
+    change then);
+  - the terrain-type (forest, desert...) and river layers → G5, where terrain starts to matter;
+  - per-province HYDE grids → only if a region looks wrong.
+- **Checked:** typecheck, lint and the suite pass (apart from the two `jq` tests). In headless Chrome France starts with
+  33,017 tiles; Europe, Germany, India and Africa render with their states, names and flags.
 
 ### G2: The grand-strategy shell (3–4 sessions)
 
@@ -404,7 +445,8 @@ power (the AI's historical interests: Russia and the Straits, Prussia and German
 
 ### G8: More start dates (2–3 sessions)
 
-1861, 1871, 1885, 1914, 1936 and 1962 from §6's sources. The provinces were already cut for them in G1.
+1861, 1871, 1885, 1914, 1936 and 1962 from §6's sources. **Provinces are re-cut once first:** by the union of every
+start date's borders, so their shapes never change again (their ids do, once, so every test that names one reruns).
 
 ### G9: Ledger, history and endings (2 sessions)
 

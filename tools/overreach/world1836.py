@@ -711,3 +711,48 @@ CHECKS = [
     ("Ségou", "ML", "SEG"), ("Harar", "ET", "HAR"), ("Gondar", "ET", "ETH"), ("Tbilisi", "GE", "RUS"),
     ("Ulaanbaatar", "MN", "QNG"), ("Lhasa", "CN", "QNG"), ("Almaty", "KZ", "KZH"), ("Makhachkala", "RU", "IMA"),
 ]
+
+# Towns under the name they bore in 1836, where it differs from today's (ROADMAP 3.6). Keys are
+# GeoNames' names, which is what the provinces are named from.
+NAMES_1836 = {
+    "Istanbul": "Constantinople", "İzmir": "Smyrna", "Izmir": "Smyrna", "Edirne": "Adrianople",
+    "Trabzon": "Trebizond", "Antalya": "Adalia", "Thessaloniki": "Salonica", "Plovdiv": "Philippopolis",
+    "Skopje": "Üsküb", "Zagreb": "Agram", "Ljubljana": "Laibach", "Rijeka": "Fiume", "Split": "Spalato",
+    "Dubrovnik": "Ragusa", "Bratislava": "Pressburg", "Košice": "Kaschau", "Brno": "Brünn",
+    "Plzeň": "Pilsen", "Timișoara": "Temeswar", "Cluj-Napoca": "Klausenburg", "Brașov": "Kronstadt",
+    "Sibiu": "Hermannstadt", "Oradea": "Grosswardein", "Chernivtsi": "Czernowitz", "Lviv": "Lemberg",
+    "Gdańsk": "Danzig", "Wrocław": "Breslau", "Szczecin": "Stettin", "Poznań": "Posen",
+    "Kaliningrad": "Königsberg", "Klaipėda": "Memel", "Vilnius": "Wilno", "Kyiv": "Kiev",
+    "Chișinău": "Kishinev", "Tallinn": "Reval", "Helsinki": "Helsingfors", "Oslo": "Christiania",
+    "Odesa": "Odessa", "Kharkiv": "Kharkov", "Dnipro": "Yekaterinoslav", "Mykolaiv": "Nikolaev",
+    "Zaporizhzhia": "Alexandrovsk", "Volgograd": "Tsaritsyn", "Tolyatti": "Stavropol",
+    "Ulan-Ude": "Verkhneudinsk", "Tbilisi": "Tiflis", "Yerevan": "Erivan", "Astana": "Akmolinsk",
+    "Bishkek": "Pishpek", "Ulaanbaatar": "Urga", "Mumbai": "Bombay", "Chennai": "Madras",
+    "Kolkata": "Calcutta", "Bengaluru": "Bangalore", "Kochi": "Cochin", "Kozhikode": "Calicut",
+    "Thiruvananthapuram": "Trivandrum", "Pune": "Poona", "Vadodara": "Baroda", "Mysuru": "Mysore",
+    "Varanasi": "Benares", "Kanpur": "Cawnpore", "Dhaka": "Dacca", "Yangon": "Rangoon", "Bago": "Pegu",
+    "Da Nang": "Tourane", "Ho Chi Minh City": "Saigon", "Jakarta": "Batavia", "Beijing": "Peking",
+    "Nanjing": "Nanking", "Guangzhou": "Canton", "Xiamen": "Amoy", "Fuzhou": "Foochow",
+    "Shantou": "Swatow", "Tianjin": "Tientsin", "Shenyang": "Mukden", "Chongqing": "Chungking",
+    "Tokyo": "Edo", "Busan": "Pusan", "Maputo": "Lourenço Marques",
+}
+
+# Towns founded after 1836 (modern GeoNames name: year). At the start the province has no town and
+# takes its region's name; G7 brings them in on their dates.
+FOUNDED = {
+    "Almaty": 1854, "Ashgabat": 1881, "Dushanbe": 1924, "Novosibirsk": 1893, "Khabarovsk": 1858,
+    "Vladivostok": 1860, "Murmansk": 1916, "Magnitogorsk": 1929, "Norilsk": 1935, "Donetsk": 1869,
+    "Kuala Lumpur": 1857, "Mandalay": 1857, "Shenzhen": 1979, "Qingdao": 1898, "Harbin": 1898,
+    "Dalian": 1898, "Sapporo": 1869, "Tel Aviv": 1909, "Amman": 1878, "Islamabad": 1960,
+    "Chandigarh": 1952, "Naypyidaw": 2005, "Canberra": 1913, "Auckland": 1840, "Wellington": 1840,
+    "Christchurch": 1850, "Dunedin": 1848, "Brasília": 1960, "Belo Horizonte": 1897, "Goiânia": 1933,
+    "Houston": 1837, "Dallas": 1841, "Denver": 1858, "Seattle": 1851, "Vancouver": 1886,
+    "Atlanta": 1837, "Miami": 1896, "Minneapolis": 1867, "Portland": 1845, "Phoenix": 1867,
+    "Las Vegas": 1905, "Salt Lake City": 1847, "Oklahoma City": 1889, "Calgary": 1875,
+    "Kinshasa": 1881, "Brazzaville": 1880, "Harare": 1890, "Bulawayo": 1894, "Nairobi": 1899,
+    "Kampala": 1890, "Addis Ababa": 1886, "Dar es Salaam": 1865, "Lusaka": 1905, "Windhoek": 1890,
+    "Johannesburg": 1886, "Pretoria": 1855, "Abidjan": 1898, "Abuja": 1991, "Libreville": 1849,
+    "Yaoundé": 1889, "Bangui": 1889, "N'Djamena": 1900, "Kigali": 1907, "Bujumbura": 1889,
+    "Lilongwe": 1947, "Gaborone": 1965, "Dodoma": 1974, "Nouakchott": 1957, "Conakry": 1884,
+    "Dakar": 1857, "Omdurman": 1884, "Djibouti": 1888,
+}

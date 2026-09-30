@@ -11,7 +11,12 @@ import type {
 import { zInt, zU16Array } from "../snapshot/SnapshotType";
 import { simpleHash } from "../Util";
 import { Cities } from "./Cities";
-import { generateProvinces, ProvinceRecord, Provinces } from "./Provinces";
+import {
+  generateProvinces,
+  GROWTH_DEFAULT,
+  ProvinceRecord,
+  Provinces,
+} from "./Provinces";
 import { forEachOwnedTile, type ScenarioProvinces } from "./Scenario";
 
 // Owns the game's provinces (Provinces.ts): builds them on its first tick,
@@ -107,6 +112,7 @@ function drawnProvinces(
       owner: 0,
       capital: c !== null && home[c] === i + 1 ? c : null,
       population: s.populations?.[i] ?? 0,
+      growth: s.growth?.[i] ?? GROWTH_DEFAULT,
     });
   });
   return { home, records };
@@ -124,6 +130,7 @@ const ProvinceStateSchema = z.object({
           owner: zInt(),
           capital: zInt().nullable(),
           population: zInt(),
+          growth: zInt(),
         })
         .nullable()
         .array(),
