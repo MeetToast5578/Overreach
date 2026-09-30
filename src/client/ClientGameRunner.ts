@@ -50,7 +50,6 @@ import {
   ToggleRenderDebugGuiEvent,
 } from "./InputHandler";
 import { pagePin } from "./PagePin";
-import { leftClickSelects, selectTile } from "./overreach/Selection";
 import { versionedPathForMismatchedGame } from "./ServerList";
 import { reportGameError } from "./Telemetry";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
@@ -73,6 +72,7 @@ import { WebGLFrameBuilder } from "./WebGLFrameBuilder";
 import { MapLayerController } from "./controllers/MapLayerController";
 import { createRenderer, GameRenderer } from "./hud/GameRenderer";
 import { goldRateTracker } from "./hud/layers/lib/GoldRateTracker";
+import { leftClickSelects, selectTile } from "./overreach/Selection";
 import {
   applyGraphicsOverrides,
   createRenderSettings,
@@ -107,6 +107,9 @@ export interface LobbyConfig {
   gameRecord?: GameRecord;
   // Watch without playing.
   spectator?: boolean;
+  // Overreach: resume a saved game (a core snapshot taken at `snapshotTick`).
+  snapshot?: Uint8Array;
+  snapshotTick?: number;
 }
 
 export interface JoinLobbyResult {
@@ -691,7 +694,11 @@ async function createClientGame(
   // Kick off the font-atlas fetch so it overlaps with worker init; the
   // render passes need it parsed before createWebGLView runs.
   const atlasDataLoad = preloadAtlasData();
-  const worker = new WorkerClient(lobbyConfig.gameStartInfo, clientID);
+  const worker = new WorkerClient(
+    lobbyConfig.gameStartInfo,
+    clientID,
+    lobbyConfig.snapshot,
+  );
   await worker.initialize();
   await atlasDataLoad;
   const gameView = new GameView(

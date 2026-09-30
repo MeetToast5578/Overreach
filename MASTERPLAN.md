@@ -427,8 +427,13 @@ one commit per slice.
 - **Look:** dark panels with brass edges (`overreach.css`); OpenFront's leaderboard is hidden in these games.
 - **Checked:** 16 new tests (geometry, palettes, centroids, selection); in headless Chrome the windows, names and all
   five map modes render over Europe, and a click on Bavaria opens Munich's province and Bavaria's nation.
-- **Still to do in G2:** save and load, the title screen's start dates and nation picking on the map, hotkeys, an alerts
-  row and the event window's new look, and tooltips that break numbers down.
+- **Save and load** (`Saves.ts`): the top bar's disk button saves, and the game autosaves every 5 in-game years. A save
+  is the worker's core snapshot (gzipped) plus the start info, in IndexedDB. The title screen has Continue and a list of
+  saves. A loaded game starts a new worker from the snapshot; `LocalServer` numbers its next turn from the saved tick.
+  Checked in Chrome: France saved on 30 April 1836, continued with the same 33,017 tiles and kept running.
+- **Hotkeys:** OpenFront's pause and speed keys stay (they're in Settings).
+- **Still to do in G2:** the new-game screen (start date card, nation picking on the map), an alerts row and the event
+  window's new look, and tooltips that break numbers down.
 
 - **Done when:** you can start 1836 as Prussia by clicking it, read any province and nation, switch map modes, save in
   1840 and load it, and never see an OpenFront menu.

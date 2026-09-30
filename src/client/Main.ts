@@ -29,6 +29,7 @@ import "./components/Footer";
 import "./components/MainLayout";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
+import { setCurrentGame } from "./overreach/Saves";
 import "./overreach/Title";
 import "./overreach/overreach.css";
 import { initAudioMixer } from "./sound/AudioMixer";
@@ -73,6 +74,9 @@ export interface JoinLobbyEvent {
   spectator?: boolean;
   // Overreach: play under this name, with no clan tag (a scenario nation's).
   playerName?: string;
+  // Overreach: resume a saved game.
+  snapshot?: Uint8Array;
+  snapshotTick?: number;
 }
 
 class Client {
@@ -192,11 +196,13 @@ class Client {
       this.lobbyHandle.stop(true);
     }
 
+    const playerName = lobby.playerName ?? fallbackPlayerName().name;
+    if (lobby.gameStartInfo) setCurrentGame(lobby.gameStartInfo, playerName);
     const newLobbyHandle = joinLobby(this.eventBus, {
       gameID: lobby.gameID,
       cosmetics: {},
       turnstileToken: null,
-      playerName: lobby.playerName ?? fallbackPlayerName().name,
+      playerName,
       playerClanTag: null,
       playerRole: null,
       gameStartInfo:
@@ -208,6 +214,8 @@ class Client {
           : undefined),
       gameRecord: lobby.gameRecord,
       spectator: lobby.spectator,
+      snapshot: lobby.snapshot,
+      snapshotTick: lobby.snapshotTick,
     });
 
     if (this.mostRecentJoinEvent !== event.timeStamp) {

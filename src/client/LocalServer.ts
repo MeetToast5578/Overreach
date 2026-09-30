@@ -137,6 +137,13 @@ export class LocalServer {
     if (!this.clientID) {
       throw new Error("missing clientID");
     }
+    // Overreach: a saved game resumes at its tick, so the next turn is numbered from there.
+    const resumeAt = this.lobbyConfig.snapshotTick ?? 0;
+    this.turns = Array.from({ length: resumeAt }, (_, turnNumber) => ({
+      turnNumber,
+      intents: [],
+    }));
+    this.turnsExecuted = resumeAt;
     this.clientMessage({
       type: "start",
       gameStartInfo: this.lobbyConfig.gameStartInfo,

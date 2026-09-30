@@ -59,6 +59,37 @@ describe("LocalServer edge cases", () => {
     expect(() => server.endGame()).not.toThrow();
   });
 
+  it("numbers the next turn of a game resumed from a save from the save's tick", () => {
+    const messages: ServerMessage[] = [];
+    const server = new LocalServer(
+      {
+        gameStartInfo: makeGameStartInfo(),
+        playerName: "TestUser",
+        playerClanTag: null,
+        snapshotTick: 50,
+      } as any,
+      false,
+      new EventBus(),
+    );
+    server.updateCallback(
+      () => {},
+      (message) => messages.push(message),
+    );
+    server.start();
+    server.endGame(); // stop the turn loop
+    // Pausing ends a turn at once.
+    server.onMessage({
+      type: "intent",
+      intent: { type: "toggle_pause", paused: true },
+    } as any);
+
+    const turns = messages.filter((m) => m.type === "turn");
+    expect(turns).toHaveLength(1);
+    expect((turns[0] as { turn: { turnNumber: number } }).turn.turnNumber).toBe(
+      50,
+    );
+  });
+
   it("reports a desync when a replay hash disagrees with the archived one", () => {
     const messages: ServerMessage[] = [];
     const gameRecord = {

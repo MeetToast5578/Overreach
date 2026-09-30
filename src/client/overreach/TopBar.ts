@@ -1,15 +1,14 @@
 import { html, LitElement, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { assetUrl } from "../../core/AssetUrls";
-import {
-  dayOfYear,
-  eraOf,
-  startYear,
-  yearAt,
-} from "../../core/overreach/Calendar";
+import { startYear, yearAt } from "../../core/overreach/Calendar";
 import type { Controller } from "../Controller";
 import { renderNumber, renderTroops, translateText } from "../Utils";
 import type { GameView } from "../view";
+import { dateText } from "./DateText";
+import { saveGame } from "./Saves";
+
+const AUTOSAVE_EVERY_YEARS = 5;
 
 const coin = html`<svg
   viewBox="0 0 24 24"
@@ -32,11 +31,21 @@ const people = html`<svg
     d="M3 19c0-3.6 2.6-6 6-6s6 2.4 6 6zM14.5 19c.2-2.3 1.4-4 3.6-4.4 1.8.3 3 1.9 3 4.4z"
   />
 </svg>`;
+const disk = html`<svg
+  viewBox="0 0 24 24"
+  class="h-4 w-4"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+>
+  <path d="M5 3h11l3 3v15H5zM8 3v6h7V3M8 21v-7h8v7" />
+</svg>`;
 
 /**
  * The top bar of a game with a calendar: who you are, what you hold, and the date. Its numbers
  * carry their breakdown in a tooltip, and the old bottom bar's other numbers move here as they
- * get a breakdown of their own (MASTERPLAN.md section 4).
+ * get a breakdown of their own (MASTERPLAN.md section 4). It also saves the game: on its button,
+ * and by itself every few years.
  */
 @customElement("overreach-topbar")
 export class TopBar extends LitElement implements Controller {
@@ -48,7 +57,9 @@ export class TopBar extends LitElement implements Controller {
   @state() private maxTroops = 0;
   @state() private name = "";
   @state() private flag = "";
+  @state() private notice = "";
   private last = { tick: 0, earned: 0 };
+  private autosavedYear: number | null = null;
 
   createRenderRoot() {
     return this;
@@ -60,6 +71,16 @@ export class TopBar extends LitElement implements Controller {
 
   tick() {
     this.ticks = this.game.ticks();
+    const start = startYear(this.game.config().gameConfig());
+    if (start !== null) {
+      const year = yearAt(start, this.ticks);
+      // The first look at the year sets the mark, so loading a game doesn't save it again.
+      this.autosavedYear ??= year;
+      if (year % AUTOSAVE_EVERY_YEARS === 0 && year !== this.autosavedYear) {
+        this.autosavedYear = year;
+        void this.save("auto");
+      }
+    }
     const me = this.game.myPlayer();
     if (me === null || !me.isAlive()) {
       this.name = "";
@@ -79,28 +100,27 @@ export class TopBar extends LitElement implements Controller {
     }
   }
 
-  private date(): { text: string; era: string } | null {
-    const start = startYear(this.game.config().gameConfig());
-    if (start === null) return null;
-    const year = yearAt(start, this.ticks);
-    const { month, day } = dayOfYear(this.ticks);
-    // Date.UTC keeps years below 100 and the time zone out of it.
-    const date = new Date(Date.UTC(2000, month, day));
-    date.setUTCFullYear(year);
-    return {
-      text: date.toLocaleDateString(undefined, {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-        timeZone: "UTC",
-      }),
-      era: translateText(`calendar.era_${eraOf(year)}`),
-    };
+  private async save(kind: "manual" | "auto") {
+    try {
+      const saved = await saveGame(this.game, kind);
+      if (saved) this.say(translateText(`gsg.saved_${kind}`));
+    } catch (error) {
+      console.warn("Failed to save the game:", error);
+      this.say(translateText("gsg.save_failed"));
+    }
+  }
+
+  private say(text: string) {
+    this.notice = text;
+    setTimeout(() => {
+      if (this.notice === text) this.notice = "";
+    }, 2500);
   }
 
   render() {
-    const date = this.game ? this.date() : null;
-    if (date === null) return nothing;
+    const start = this.game ? startYear(this.game.config().gameConfig()) : null;
+    if (start === null) return nothing;
+    const date = dateText(start, this.ticks);
     const chip = "flex items-center gap-1.5 rounded px-2 py-0.5 bg-black/30";
     return html`<div
       class="ov-panel pointer-events-auto fixed left-0 right-[260px] top-0 z-[250] flex h-10 items-center gap-3 border-b px-3 text-sm"
@@ -141,7 +161,17 @@ export class TopBar extends LitElement implements Controller {
                 ></span
               >
             </div>`}
-      <div class="ml-auto flex items-baseline gap-2">
+      <div class="ml-auto flex items-center gap-3">
+        ${this.notice === ""
+          ? nothing
+          : html`<span class="text-xs text-emerald-300">${this.notice}</span>`}
+        <button
+          class="ov-tab flex items-center gap-1"
+          title=${translateText("gsg.save")}
+          @click=${() => this.save("manual")}
+        >
+          ${disk}
+        </button>
         <span class="ov-title text-base">${date.text}</span>
         <span class="text-xs text-white/60">${date.era}</span>
       </div>
