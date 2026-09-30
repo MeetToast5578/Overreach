@@ -765,8 +765,7 @@ export async function sendMagicLink(email: string): Promise<boolean> {
 
 // WARNING: DO NOT EXPOSE THIS ID
 export async function getPlayToken(): Promise<string> {
-  const result = await userAuth();
-  if (result !== false) return result.jwt;
+  // Overreach has no accounts, so no JWT to refresh: the persistent id is the token.
   return getPersistentIDFromLocalStorage();
 }
 

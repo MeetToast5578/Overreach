@@ -327,6 +327,27 @@ one commit per slice.
 - Rewrite `CLAUDE.md`'s Overreach section for the new rule.
 - **Done when:** lint, the production build and the Overreach tests pass, and World 1836 plays.
 
+**Status (30 Sep 2026): done, on the branch `g0-engine-fork`.**
+
+- **Merged** upstream's 16 new commits first. The one conflict was `index.html`, where our side (no ad or tracker
+  scripts) stays.
+- **Deleted 160 source files (about 45k lines) and 150 test files:** accounts, clans, leaderboards, friends, news,
+  streams, promos, the store, inventory and cosmetics UI, payments, subscriptions, rewards, Steam, ranked, the old home
+  page and nav, the lobby modals and the public-lobby list, plus the files that only they used. `Cosmetics.ts` is
+  now a 3-function stub.
+- **New:** `Main.ts` is a single-player-only rewrite (1,989 lines became 303), and `overreach/Title.ts` is a title
+  screen (New game, Sandbox, Help, Settings) until G2. The footer keeps "© OpenFront™ and Contributors", adds "Built on
+  OpenFront (AGPL-3.0)" and a Source link (it points at the private repo until that goes public).
+- **No server traffic:** the archive upload and heartbeat in `LocalServer`, the play-token refresh, the YouTube
+  tutorial, the ad scripts and the analytics call are gone. In the browser a game makes no request outside the page's
+  own host, except the two music files that don't exist yet.
+- **Kept** because the game path uses them: `Api`, `Auth`, `ServerList`, the CrazyGames and Steam SDK wrappers,
+  `Platform`, `DesktopShell`. They can go with multiplayer (G10).
+- `en.json` lost its 1,047 unused keys, 2,301 down to 1,254 (other languages are Crowdin's).
+- **Checked:** typecheck, lint and the whole suite pass, apart from the two `jq` tests in `UpdateRegister`. In headless
+  Chrome the title, Help, Settings, the Sandbox tab and the new-game page open, and World 1836 as France starts with
+  2,628 tiles and 178 nations, in February 1836.
+
 ### G1: The Earth map (3–4 sessions)
 
 1. **Speed test:** build Earth at 5,120, 5,632 and 6,144 wide, place a 250-nation scenario, and measure tick time

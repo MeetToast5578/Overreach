@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchCosmetics } from "../../../../src/client/Cosmetics";
 import "../../../../src/client/hud/layers/WinModal";
 import type { WinModal } from "../../../../src/client/hud/layers/WinModal";
 import { SendWinnerEvent } from "../../../../src/client/Transport";
@@ -9,22 +8,7 @@ import { GameUpdateType } from "../../../../src/core/game/GameUpdates";
 
 vi.mock("../../../../src/client/Utils", () => ({
   translateText: vi.fn((key: string) => key),
-  getGamesPlayed: vi.fn(() => 10),
-  isInIframe: vi.fn(() => false),
   homeHref: vi.fn(() => "/"),
-  TUTORIAL_VIDEO_URL: "https://example.com/tutorial",
-}));
-
-vi.mock("../../../../src/client/Api", () => ({
-  getUserMe: vi.fn(async () => null),
-}));
-
-vi.mock("../../../../src/client/Cosmetics", async (importOriginal) => ({
-  ...(await importOriginal<
-    typeof import("../../../../src/client/Cosmetics")
-  >()),
-  fetchCosmetics: vi.fn(async () => null),
-  resolveCosmetics: vi.fn(() => []),
 }));
 
 vi.mock("../../../../src/client/CrazyGamesSDK", () => ({
@@ -153,18 +137,7 @@ describe("WinModal tick win handling", () => {
     await vi.waitFor(() => expect(modal!.isVisible).toBe(true));
   });
 
-  it("shows the buttons as soon as show() runs, before the cosmetics fetch settles", async () => {
-    // A visible modal activates steam-wishlist, which observes its own size;
-    // jsdom has no ResizeObserver.
-    vi.stubGlobal(
-      "ResizeObserver",
-      class {
-        observe() {}
-        unobserve() {}
-        disconnect() {}
-      },
-    );
-    vi.mocked(fetchCosmetics).mockReturnValueOnce(new Promise(() => {}));
+  it("shows the buttons as soon as show() runs", async () => {
     setup(makeGame({ winner: ["team", "Blue"], myTeam: "Blue" }));
     document.body.appendChild(modal!);
 

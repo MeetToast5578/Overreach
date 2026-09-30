@@ -91,15 +91,16 @@ Tests use a `setup()` helper from `tests/util/Setup.ts` that creates a full game
 This repo is **Overreach**, a fork of OpenFront (AGPL-3.0). The plan is `MASTERPLAN.md` (G0–G10), after `SANDBOX.md` (F0–F8, done); `ROADMAP.md` §3
 holds the 1836 world data. `legacy/` is the pre-fork engine, read-only.
 
-- Our code lives in `src/core/overreach/`, `src/client/overreach/`, `tests/overreach/`. Changes to upstream files are
-  one-line hooks, and features we don't use are hidden (`src/client/overreach/overreach.css`), not deleted, so
-  `git merge upstream/main` stays cheap.
+- Our code lives in `src/core/overreach/`, `src/client/overreach/`, `tests/overreach/`. Changes to upstream files in
+  `src/core` and the renderer stay one-line hooks. OpenFront's shell (home page, lobbies, store, accounts, clans,
+  leaderboards, ads, Steam, cosmetics) was deleted in G0, not hidden: don't bring any of it back.
+  `scripts/overreach/merge-upstream.sh` merges upstream and keeps those files deleted.
 - Keep "© OpenFront™ and Contributors" (`resources/lang/en.json` → `copyright`) visible. Never call the game OpenFront.
 - `proprietary/` holds Overreach's own assets under OpenFront's file names; none of OpenFront's remain there.
 - Never call OpenFront's API or CDN. Builds without `DOMAIN` point the API at localhost.
 - On this machine: npm 11.19, so install with `npm ci --ignore-scripts --engine-strict=false` until npm 12.1.0 is
   installed. `tests/UpdateRegister.test.ts` fails without `jq` (a deploy-script test, not ours), and
-  `MainInitialize`, `InventoryModal` and `UpdateFlagLatest` can time out under full-suite load but pass alone.
+  `UpdateFlagLatest` can time out under full-suite load but passes alone.
 - `tests/server/RenderHtml.test.ts` fails whenever a build exists in `static/` (upstream behaviour); delete `static/`
   before running the full suite.
 - Browser checks on Windows: `.claude/skills/run-openfront/` targets Ubuntu. Copy `driver.mjs` and `game.mjs` to a

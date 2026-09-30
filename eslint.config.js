@@ -35,6 +35,7 @@ export default [
             "eslint.config.js",
             "scripts/sync-assets.mjs",
             "tests/matchmaking/*.mjs",
+            "tools/overreach/*.ts",
           ],
         },
         tsconfigRootDir: import.meta.dirname,

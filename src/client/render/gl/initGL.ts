@@ -113,7 +113,8 @@ export function trackGLInit(
   renderer: string,
   maxTextureSize?: number,
 ): void {
-  window.gtag?.("event", "gl_init", {
+  // Overreach loads no analytics, so gtag is never defined and this does nothing.
+  (window as { gtag?: (...args: unknown[]) => void }).gtag?.("event", "gl_init", {
     status,
     renderer: status === "ok" ? "" : renderer,
     ...(maxTextureSize !== undefined && {

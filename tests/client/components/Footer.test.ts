@@ -1,5 +1,5 @@
 import version from "resources/version.txt?raw";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { ClientEnv } from "../../../src/client/ClientEnv";
 import { composeGameVersion } from "../../../src/client/GameVersion";
 import { Footer } from "../../../src/client/components/Footer";
@@ -38,25 +38,12 @@ describe("page-footer version line", () => {
     return footer;
   }
 
-  it("renders the game version on the web, with no Steam subtext", async () => {
+  it("renders the game version", async () => {
     window.openfrontDesktop = undefined;
     await mount();
 
     const line = footer.querySelector(".footer-version");
     expect(line?.textContent?.trim()).toBe(gameVersion);
-  });
-
-  it("appends the shell version inside the desktop shell", async () => {
-    window.openfrontDesktop = {
-      version: () => Promise.resolve("0.2.0"),
-    };
-    await mount();
-
-    await vi.waitFor(async () => {
-      await footer.updateComplete;
-      const line = footer.querySelector(".footer-version");
-      expect(line?.textContent?.trim()).toBe(`${gameVersion} (Steam v0.2.0)`);
-    });
   });
 
   // End to end through the component: with a real BOOTSTRAP_CONFIG in the
@@ -77,20 +64,5 @@ describe("page-footer version line", () => {
 
     const line = footer.querySelector(".footer-version");
     expect(line?.textContent?.trim()).toBe(composeGameVersion(version, SHA));
-  });
-
-  // The bridge lives in a separate private repo, so the footer must degrade to
-  // the game version alone rather than render a broken label.
-  it("falls back to the game version when the bridge rejects", async () => {
-    window.openfrontDesktop = {
-      version: () => Promise.reject(new Error("boom")),
-    };
-    await mount();
-
-    await vi.waitFor(async () => {
-      await footer.updateComplete;
-      const line = footer.querySelector(".footer-version");
-      expect(line?.textContent?.trim()).toBe(gameVersion);
-    });
   });
 });

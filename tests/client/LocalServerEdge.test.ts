@@ -2,15 +2,6 @@ import { describe, expect, it, vi } from "vitest";
 import { EventBus } from "../../src/core/EventBus";
 import type { GameStartInfo, ServerMessage } from "../../src/core/Schemas";
 
-vi.mock("../../src/client/Auth", () => ({
-  getAuthHeader: vi.fn(async () => "Bearer test-jwt"),
-  getPersistentID: vi.fn(() => "123e4567-e89b-12d3-a456-426614174000"),
-}));
-
-vi.mock("../../src/client/Api", () => ({
-  getApiBase: vi.fn(() => "https://api.test"),
-}));
-
 vi.mock("src/client/ClientEnv", () => ({
   ClientEnv: {
     turnIntervalMs: vi.fn(() => 100),
@@ -52,7 +43,7 @@ function makeGameStartInfo(): GameStartInfo {
 }
 
 describe("LocalServer edge cases", () => {
-  it("refuses to start or archive a lobby without gameStartInfo", () => {
+  it("refuses to start a lobby without gameStartInfo", () => {
     const server = new LocalServer(
       { playerName: "TestUser", playerClanTag: null } as any,
       false,
@@ -64,9 +55,8 @@ describe("LocalServer edge cases", () => {
     );
 
     expect(() => server.start()).toThrow("missing gameStartInfo");
-    // endGame -> archiveGameRecord hits the same guard (and stops the
-    // turn-check interval start() had already begun).
-    expect(() => server.endGame()).toThrow("missing gameStartInfo");
+    // endGame stops the turn-check interval start() had already begun.
+    expect(() => server.endGame()).not.toThrow();
   });
 
   it("reports a desync when a replay hash disagrees with the archived one", () => {

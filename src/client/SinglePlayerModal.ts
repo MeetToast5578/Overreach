@@ -17,7 +17,6 @@ import { UserSettings } from "../core/game/UserSettings";
 import type { Scenario } from "../core/overreach/Scenario";
 import { PlayerCosmetics, TeamCountConfig } from "../core/Schemas";
 import { generateID } from "../core/Util";
-import { responseHasLinkedIdentity } from "./AccountIdentity";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import { BaseModal, type ModalConfig } from "./components/BaseModal";
@@ -32,7 +31,6 @@ import { showInGameAlert } from "./InGameModal";
 import { JoinLobbyEvent } from "./Main";
 import { scenarioPlayer } from "./overreach/ScenarioFile";
 import { fallbackPlayerName, ResolvedPlayerName } from "./PlayerName";
-import { UsernameInput } from "./UsernameInput";
 import {
   getBotsForCompactMap,
   getNationsForCompactMap,
@@ -62,6 +60,15 @@ import { terrainMapFileLoader } from "./TerrainMapFileLoader";
  * rare rather than routine.
  */
 export const START_PREPARE_DEADLINE_MS = 15_000;
+
+// Overreach has no accounts: no linked identity (so no achievements) and no username box.
+const responseHasLinkedIdentity = (_userMe: UserMeResponse | false) => false;
+type UsernameInput = {
+  resolvedName(): ResolvedPlayerName;
+  whenSeeded(): Promise<void>;
+  getClanTag(): string | null;
+};
+
 
 /**
  * Ceiling on the CrazyGames midgame ad, deliberately far above
