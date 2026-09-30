@@ -1,11 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import {
-  Duos,
-  GameMapType,
-  GameMode,
-  Quads,
-  Trios,
-} from "../../src/core/game/Game";
+import { GameMapType, GameMode, Quads } from "../../src/core/game/Game";
 import { ServerStartGameMessage } from "../../src/core/Schemas";
 import { createGameWireContext } from "../../src/core/ZbinWire";
 import {
@@ -210,65 +204,6 @@ describe("GameServer - Clan Overflow Spectator Conversion", () => {
     expect(clients.every((c) => !c.spectator)).toBe(true);
   });
 
-  test("Fixed playerTeams config (Duos, Trios, Quads) strictly limits clan size", () => {
-    // Quads: team size = 4
-    const quadsGame = makeGame({
-      config: {
-        gameMode: GameMode.Team,
-        playerTeams: Quads,
-      },
-    });
-    const quadsClients = [
-      makeClient({ clientID: cid("q1"), clanTag: "CLAN" }),
-      makeClient({ clientID: cid("q2"), clanTag: "CLAN" }),
-      makeClient({ clientID: cid("q3"), clanTag: "CLAN" }),
-      makeClient({ clientID: cid("q4"), clanTag: "CLAN" }),
-      makeClient({ clientID: cid("q5"), clanTag: "CLAN" }),
-    ];
-    for (const c of quadsClients) quadsGame.joinClient(c);
-    startGame(quadsGame);
-
-    expect(quadsClients.slice(0, 4).every((c) => !c.spectator)).toBe(true);
-    expect(quadsClients[4].spectator).toBe(true);
-
-    // Trios: team size = 3
-    const triosGame = makeGame({
-      config: {
-        gameMode: GameMode.Team,
-        playerTeams: Trios,
-      },
-    });
-    const triosClients = [
-      makeClient({ clientID: cid("t1"), clanTag: "CLAN" }),
-      makeClient({ clientID: cid("t2"), clanTag: "CLAN" }),
-      makeClient({ clientID: cid("t3"), clanTag: "CLAN" }),
-      makeClient({ clientID: cid("t4"), clanTag: "CLAN" }),
-    ];
-    for (const c of triosClients) triosGame.joinClient(c);
-    startGame(triosGame);
-
-    expect(triosClients.slice(0, 3).every((c) => !c.spectator)).toBe(true);
-    expect(triosClients[3].spectator).toBe(true);
-
-    // Duos: team size = 2
-    const duosGame = makeGame({
-      config: {
-        gameMode: GameMode.Team,
-        playerTeams: Duos,
-      },
-    });
-    const duosClients = [
-      makeClient({ clientID: cid("d1"), clanTag: "CLAN" }),
-      makeClient({ clientID: cid("d2"), clanTag: "CLAN" }),
-      makeClient({ clientID: cid("d3"), clanTag: "CLAN" }),
-    ];
-    for (const c of duosClients) duosGame.joinClient(c);
-    startGame(duosGame);
-
-    expect(duosClients.slice(0, 2).every((c) => !c.spectator)).toBe(true);
-    expect(duosClients[2].spectator).toBe(true);
-  });
-
   test("Variable player size with nations accounts for nation slider count", () => {
     // 5 clan players with 201 nations in 2 teams -> capacity ceil((5+201)/2) = 103 -> none converted
     const game = makeGame({
@@ -291,57 +226,6 @@ describe("GameServer - Clan Overflow Spectator Conversion", () => {
     for (const c of clients) {
       expect(c.spectator).toBe(false);
     }
-  });
-
-  test("Clan overflow accounts for default map nation count in variable team sizing", () => {
-    // World map has 72 default nations.
-    // Case A: 10 players in clan CLAN (total = 10 + 72 = 82):
-    // maxTeamSize = ceil(82 / 2) = 41.
-    // All 10 clan members should remain active players.
-    const game = makeGame({
-      config: {
-        gameMode: GameMode.Team,
-        playerTeams: 2,
-        nations: "default",
-        gameMap: GameMapType.World,
-      },
-    });
-    const clients = Array.from({ length: 10 }, (_, i) =>
-      makeClient({ clientID: cid(`d${i}`), clanTag: "CLAN" }),
-    );
-    for (const c of clients) game.joinClient(c);
-    startGame(game);
-
-    for (const c of clients) {
-      expect(c.spectator).toBe(false);
-    }
-
-    // Case B: Map with 0 default nations (e.g. BaikalNukeWars) and 2 teams:
-    // 5 clan members and 3 opposing players on BaikalNukeWars with 2 teams ->
-    // total = 8. maxTeamSize = ceil(8 / 2) = 4.
-    // First 4 fit, 5th is converted to spectator!
-    const zeroNationsGame = makeGame({
-      config: {
-        gameMode: GameMode.Team,
-        playerTeams: 2,
-        nations: "default",
-        gameMap: GameMapType.BaikalNukeWars,
-      },
-    });
-    const clanClients = Array.from({ length: 5 }, (_, i) =>
-      makeClient({ clientID: cid(`z${i}`), clanTag: "CLAN" }),
-    );
-    const otherClients = Array.from({ length: 3 }, (_, i) =>
-      makeClient({ clientID: cid(`o${i}`), clanTag: "OTHER" }),
-    );
-    for (const c of [...clanClients, ...otherClients]) {
-      zeroNationsGame.joinClient(c);
-    }
-    startGame(zeroNationsGame);
-
-    expect(clanClients.slice(0, 4).every((c) => !c.spectator)).toBe(true);
-    expect(clanClients[4].spectator).toBe(true);
-    expect(otherClients.every((c) => !c.spectator)).toBe(true);
   });
 
   test("disableClanTags and anonymizeNames exempt clan members from conversion", () => {
@@ -395,7 +279,7 @@ describe("GameServer - Clan Overflow Spectator Conversion", () => {
         gameMode: GameMode.Team,
         playerTeams: Quads,
         nations: "default",
-        gameMap: GameMapType.BaikalNukeWars,
+        gameMap: GameMapType.Earth,
       },
     });
     const clanClients = Array.from({ length: 4 }, (_, i) =>

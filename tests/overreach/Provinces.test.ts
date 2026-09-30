@@ -284,7 +284,7 @@ describe("Provinces", () => {
   test("a scenario's drawn provinces: names, capitals, owners", async () => {
     const game = await startScenario("plains", {
       version: 1,
-      map: GameMapType.World,
+      map: GameMapType.Earth,
       mapSize: GameMapSize.Normal,
       nations: [
         { id: "westland", name: "Westland" },
@@ -320,7 +320,7 @@ describe("Provinces", () => {
     const scenario = ScenarioSchema.parse(
       JSON.parse(fs.readFileSync(file, "utf8")),
     );
-    const game = await startScenario("world", scenario);
+    const game = await startScenario("earth", scenario);
     const provinces = (game as GameImpl).provinces!;
     expect(provinces.violation()).toBeNull();
     expect(provinces.records.length).toBeGreaterThan(5000);
@@ -363,7 +363,7 @@ describe("Provinces", () => {
         bots: 0,
         scenario: {
           version: 1,
-          map: GameMapType.World,
+          map: GameMapType.Earth,
           mapSize: GameMapSize.Normal,
           nations: [
             { id: "westland", name: "Westland" },

@@ -292,7 +292,7 @@ describe("json escape hatch", () => {
       nested: z.object({ a: z.boolean() }).optional(),
     });
     const S = zb.object({ config: zb.json(Config.partial()) });
-    const v = { config: { gameMap: "Asia", nested: { a: true } } };
+    const v = { config: { gameMap: "Earth", nested: { a: true } } };
     expect(S.parseBytes(S.serialize(v))).toEqual(v);
   });
 });

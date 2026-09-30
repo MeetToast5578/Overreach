@@ -30,27 +30,14 @@ from scipy import ndimage
 from shapely.geometry import shape
 
 import world1836 as data
+from earthgeo import Earth
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-# OpenFront's World map: 2000x1000, equirectangular, 360 degrees wide from
-# 168.25 W, 6.12 px per degree of latitude with the equator at y = 511.5.
-# Fitted against Natural Earth land (92% of tiles agree; within ~0.2 degrees
-# from the Arctic to 55 S). See SANDBOX.md F3.
-W, H = 2000, 1000
-LON0, PX_LON, Y_EQ, PX_LAT = -168.25, 2000 / 360, 511.5, 6.12
 
 # The legacy rasters: 7680x3840, lon -180..180, lat 90..-90.
 LW, LH = 7680, 3840
 LPX = LW / 360
-
-
-def tile_lonlat():
-    x = np.arange(W) + 0.5
-    y = np.arange(H) + 0.5
-    lon = (x / PX_LON + LON0 + 180) % 360 - 180
-    lat = (Y_EQ - y) / PX_LAT
-    return np.broadcast_to(lon, (H, W)), np.broadcast_to(lat[:, None], (H, W))
+POLITY_FILL_DEG = 0.55  # 1815 outlines are coarse: land within this of a polity takes it (about 55 km)
 
 
 def legacy_index(lon, lat):
@@ -103,10 +90,13 @@ def nearest_fill(values, have, where):
 
 class Grid:
     def __init__(self, args):
-        of = np.fromfile(os.path.join(REPO, "resources/maps/world/map.bin"), np.uint8)
-        of = of.reshape(H, W)
+        maps = os.path.join(REPO, "resources/maps", args.map)
+        manifest = json.load(open(os.path.join(maps, "manifest.json"), encoding="utf-8"))
+        self.geo = Earth(manifest["map"]["width"])
+        assert self.geo.H == manifest["map"]["height"], "build_earth.py and the map disagree on the size"
+        of = np.fromfile(os.path.join(maps, "map.bin"), np.uint8).reshape(self.geo.H, self.geo.W)
         self.land = ((of & 0x80) > 0) & ((of & 0x1F) != 31)
-        self.lon, self.lat = tile_lonlat()
+        self.lon, self.lat = self.geo.lonlat_grid()
         py, px = legacy_index(self.lon, self.lat)
 
         cache = os.path.join(args.legacy, "map8k")
@@ -123,15 +113,15 @@ class Grid:
         pol8k, self.polity_names = paint_polities(geo["features"])
         pol = pol8k[py, px].astype(np.int32)
 
-        # The World map's coasts differ from Natural Earth's: its land beyond
-        # theirs takes the nearest values, and polity gaps of up to 3 tiles
+        # The map's coasts can differ from Natural Earth's: its land beyond
+        # theirs takes the nearest values, and polity gaps of up to 0.55 degrees
         # (coastline mismatch) the nearest polity.
         ne = a3 > 0
         a3 = nearest_fill(a3, ne, self.land & ~ne)
         adm = nearest_fill(adm, ne & (adm > 0), self.land & (adm == 0))
         has_pol = pol > 0
         dist = ndimage.distance_transform_edt(~has_pol)
-        pol = nearest_fill(pol, has_pol, self.land & ~has_pol & (dist <= 3))
+        pol = nearest_fill(pol, has_pol, self.land & ~has_pol & (dist <= POLITY_FILL_DEG * self.geo.ppd))
         self.a3, self.adm, self.pol = a3, adm, pol
 
 
@@ -186,14 +176,14 @@ def B(lon0, lat0, lon1, lat1):
     return Sel(lambda g: (g.lon >= lon0) & (g.lon < lon1) & (g.lat >= lat0) & (g.lat < lat1))
 
 
-ALL = Sel(lambda g: np.ones((H, W), bool))
+ALL = Sel(lambda g: np.ones(g.land.shape, bool))
 
 
 def assign(g):
     tags = [None] + list(data.NATIONS)
     index = {t: i for i, t in enumerate(tags)}
     index["-"] = 0
-    owner = np.zeros((H, W), np.int32)
+    owner = np.zeros(g.land.shape, np.int32)
     for name, tag in data.POLITIES.items():
         owner[P(name)(g) & g.land] = index[tag]
     for tag, sel in data.RULES(C, A, P, B, ALL):
@@ -217,17 +207,13 @@ def load_towns(legacy):
     return towns
 
 
-def tile_of(lon, lat):
-    x = int(((lon - LON0) % 360) * PX_LON)
-    y = int(Y_EQ - lat * PX_LAT)
-    return min(max(x, 0), W - 1), min(max(y, 0), H - 1)
-
-
 def town_tile(g, name, lon, lat):
     """A town's tile: the nearest land within 3 tiles (towns on small islands
     or coasts), or None. data.TOWN_AT moves towns the map's coast misplaces."""
     lon, lat = data.TOWN_AT.get(name, (lon, lat))
-    x, y = tile_of(lon, lat)
+    H, W = g.land.shape
+    x, y = g.geo.tile(lon, lat)
+    x, y = min(max(x, 0), W - 1), min(max(y, 0), H - 1)
     for r in range(0, 4):
         ys, xs = np.mgrid[max(0, y - r):y + r + 1, max(0, x - r):x + r + 1]
         ok = g.land[ys, xs]
@@ -252,7 +238,7 @@ def check_towns(g, owner, tags, towns):
     return failures
 
 
-def scenario(owner, tags):
+def scenario(owner, tags, map_name):
     present = [t for t in tags[1:] if (owner == tags.index(t)).any()]
     empty = [t for t in tags[1:] if t not in present]
     order = {t: i + 1 for i, t in enumerate(present)}
@@ -275,7 +261,7 @@ def scenario(owner, tags):
         alliances += [[a, b] for i, a in enumerate(members) for b in members[i + 1:]]
     return {
         "version": 1,
-        "map": "World",
+        "map": map_name,
         "mapSize": "Normal",
         "startYear": 1836,
         "nations": nations,
@@ -296,7 +282,7 @@ def runs_of(grid):
     return runs.tolist()
 
 
-MIN_PIECE = 8  # tiles
+MIN_PIECE = 24  # tiles, about 650 km2 on the Earth map
 
 
 def provinces(args, g, owner):
@@ -306,6 +292,7 @@ def provinces(args, g, owner):
     province's main town is named after it and has it as capital; the rest
     take the subregion's name."""
     cache = os.path.join(args.legacy, "map8k")
+    H, W = g.land.shape
     py, px = legacy_index(g.lon, g.lat)
     pro = np.load(os.path.join(cache, "provinces.npy"))[py, px].astype(np.int64)
     has = pro > 0
@@ -434,12 +421,14 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--legacy", required=True)
     ap.add_argument("--geojson", required=True)
+    ap.add_argument("--map", default="earth", help="a folder of resources/maps (built by build_earth.py)")
     ap.add_argument("--out", default=os.path.join(REPO, "resources/scenarios/world-1836.json"))
     ap.add_argument("--preview")
     ap.add_argument("--polities", action="store_true", help="list 1815 polities with their centres and exit")
     args = ap.parse_args()
 
     g = Grid(args)
+    g.map_name = json.load(open(os.path.join(REPO, "resources/maps", args.map, "manifest.json"), encoding="utf-8"))["name"]
     if args.polities:
         for i, name in enumerate(g.polity_names[1:], 1):
             m = (g.pol == i) & g.land
@@ -448,7 +437,7 @@ def main():
         return
 
     owner, tags = assign(g)
-    out, empty = scenario(owner, tags)
+    out, empty = scenario(owner, tags, g.map_name)
     if empty:
         print(f"warning: no land for {', '.join(empty)}")
     failures = check_towns(g, owner, tags, load_towns(args.legacy))

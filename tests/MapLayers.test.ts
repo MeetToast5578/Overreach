@@ -368,21 +368,21 @@ describe("Map layer feature", () => {
         { id: "bad", placement: "land", alpha: -0.5 },
       ]);
       await expect(
-        loadTerrainMap(GameMapType.World, GameMapSize.Normal, loader, false),
+        loadTerrainMap(GameMapType.Earth, GameMapSize.Normal, loader, false),
       ).rejects.toThrow("invalid alpha");
     });
 
     test("throws on alpha above 1", async () => {
       const loader = makeLoader([{ id: "bad", placement: "land", alpha: 1.5 }]);
       await expect(
-        loadTerrainMap(GameMapType.World, GameMapSize.Normal, loader, false),
+        loadTerrainMap(GameMapType.Earth, GameMapSize.Normal, loader, false),
       ).rejects.toThrow("invalid alpha");
     });
 
     test("throws on NaN alpha", async () => {
       const loader = makeLoader([{ id: "bad", placement: "land", alpha: NaN }]);
       await expect(
-        loadTerrainMap(GameMapType.World, GameMapSize.Normal, loader, false),
+        loadTerrainMap(GameMapType.Earth, GameMapSize.Normal, loader, false),
       ).rejects.toThrow("invalid alpha");
     });
 
@@ -393,7 +393,7 @@ describe("Map layer feature", () => {
         { id: "good3", placement: "land", alpha: 1 },
       ]);
       const data = await loadTerrainMap(
-        GameMapType.World,
+        GameMapType.Earth,
         GameMapSize.Normal,
         loader,
         false,
@@ -403,11 +403,13 @@ describe("Map layer feature", () => {
 
     test("accepts layers without alpha (undefined)", async () => {
       const loader = makeLoader([{ id: "noalpha", placement: "land" }]);
+      // fresh: the earlier tests cached this map, and Earth is the only one.
       const data = await loadTerrainMap(
-        GameMapType.Europe,
+        GameMapType.Earth,
         GameMapSize.Normal,
         loader,
         false,
+        true,
       );
       expect(data.layers).toHaveLength(1);
     });

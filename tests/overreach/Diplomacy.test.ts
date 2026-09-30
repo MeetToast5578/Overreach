@@ -187,7 +187,7 @@ describe("Diplomacy", () => {
   test("a scenario's subjects, kept through snapshots", async () => {
     const scenario: Scenario = {
       version: 1,
-      map: GameMapType.World,
+      map: GameMapType.Earth,
       mapSize: GameMapSize.Normal,
       nations: [
         { id: "overlord", name: "Overlord" },

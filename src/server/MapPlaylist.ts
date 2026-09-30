@@ -246,11 +246,6 @@ export class MapPlaylist {
       excludedModifiers.push("isRandomSpawn");
     }
 
-    // No gold multi on FourIslands team games - Too high chance of 3h long stalemates
-    if (map === GameMapType.FourIslands && mode === GameMode.Team) {
-      excludedModifiers.push("goldMultiplier");
-    }
-
     // Hard nations modifier only applies when nations are present (not HvN, which is always hard)
     if (mode === GameMode.Team) {
       excludedModifiers.push("isHardNations");
@@ -488,13 +483,7 @@ export class MapPlaylist {
   }
 
   public get1v1Config(): GameConfig {
-    const maps = [
-      GameMapType.Australia, // 40%
-      GameMapType.Australia,
-      GameMapType.Iceland, // 20%
-      GameMapType.Asia, // 20%
-      GameMapType.EuropeClassic, // 20%
-    ];
+    const maps = [GameMapType.Earth];
     const isCompact = Math.random() < 0.2;
     return {
       donateGold: false,
@@ -519,13 +508,7 @@ export class MapPlaylist {
   }
 
   public get2v2Config(): GameConfig {
-    const maps = [
-      GameMapType.Australia, // 40%
-      GameMapType.Australia,
-      GameMapType.Iceland, // 20%
-      GameMapType.Asia, // 20%
-      GameMapType.EuropeClassic, // 20%
-    ];
+    const maps = [GameMapType.Earth];
     const isCompact = Math.random() < 0.5;
     return {
       donateGold: true,

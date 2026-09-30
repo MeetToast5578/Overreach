@@ -4,6 +4,10 @@
  *
  *   npx tsx tests/overreach/perf/ScenarioPerf.ts [--map world] [--nations 250] [--ticks 600]
  *                                                [--write out.scenario.json]
+ *                                                [--scenario resources/scenarios/world-1836.json]
+ *
+ * --scenario plays a real scenario file (its own map, nations, provinces and calendar) instead of
+ * the flood fill.
  *
  * --write saves the scenario for the sandbox's "Load scenario" and exits.
  *
@@ -26,7 +30,11 @@ import { createGame } from "../../../src/core/game/GameImpl";
 import { GameMap } from "../../../src/core/game/GameMap";
 import { loadTerrainMap } from "../../../src/core/game/TerrainMapLoader";
 import { GameRunner } from "../../../src/core/GameRunner";
-import { encodeOwners, Scenario } from "../../../src/core/overreach/Scenario";
+import {
+  encodeOwners,
+  Scenario,
+  ScenarioSchema,
+} from "../../../src/core/overreach/Scenario";
 import { PseudoRandom } from "../../../src/core/PseudoRandom";
 import { GameConfig } from "../../../src/core/Schemas";
 import { NodeGameMapLoader } from "../../perf/fullgame/NodeGameMapLoader";
@@ -82,7 +90,14 @@ export function voronoiScenario(
 
 async function main() {
   console.debug = () => {};
-  const mapName = arg("map", "world");
+  const file = arg("scenario", "");
+  const fromFile =
+    file === ""
+      ? undefined
+      : ScenarioSchema.parse(
+          JSON.parse(fs.readFileSync(path.resolve(file), "utf8")),
+        );
+  const mapName = fromFile?.map ?? arg("map", "world");
   const nations = parseInt(arg("nations", "250"), 10);
   const ticks = parseInt(arg("ticks", "600"), 10);
   const mapType = Object.values(GameMapType).find(
@@ -92,7 +107,8 @@ async function main() {
   const loader = new NodeGameMapLoader(path.join(ROOT, "resources/maps"));
   const terrain = await loadTerrainMap(mapType, GameMapSize.Normal, loader);
   let t0 = performance.now();
-  const scenario = voronoiScenario(terrain.gameMap, mapType, nations);
+  const scenario =
+    fromFile ?? voronoiScenario(terrain.gameMap, mapType, nations);
   const json = JSON.stringify(scenario);
   const out = arg("write", "");
   if (out !== "") {

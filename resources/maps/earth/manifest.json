@@ -1,0 +1,30 @@
+{
+  "categories": ["world"],
+  "id": "Earth",
+  "layers": [
+    {
+      "id": "relief",
+      "nukeable": false,
+      "placement": "land"
+    }
+  ],
+  "map": {
+    "height": 2944,
+    "num_land_tiles": 6753317,
+    "width": 7680
+  },
+  "map16x": {
+    "height": 736,
+    "num_land_tiles": 405631,
+    "width": 1920
+  },
+  "map4x": {
+    "height": 1472,
+    "num_land_tiles": 1661941,
+    "width": 3840
+  },
+  "multiplayer_frequency": 1,
+  "name": "Earth",
+  "nations": [],
+  "translation_key": "map.earth"
+}

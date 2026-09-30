@@ -1,0 +1,17 @@
+{
+  "id": "Earth",
+  "name": "Earth",
+  "translation_key": "map.earth",
+  "categories": [
+    "world"
+  ],
+  "multiplayer_frequency": 1,
+  "layers": [
+    {
+      "id": "relief",
+      "placement": "land",
+      "nukeable": false
+    }
+  ],
+  "nations": []
+}

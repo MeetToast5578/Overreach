@@ -51,7 +51,7 @@ const countries = [
 ];
 const scenario: Scenario = {
   version: 1,
-  map: GameMapType.World,
+  map: GameMapType.Earth,
   mapSize: GameMapSize.Normal,
   nations: [],
   alliances: [],

@@ -919,14 +919,14 @@ describe("WorkerLobbyService hosted lobbies", () => {
     const ws = connectClient();
     // A schema-valid config: an invalid one would be rejected by the IPC
     // message parse and the broadcast silently dropped.
-    const games = (gameMap: GameMapType) => ({
+    const games = (bots: number) => ({
       ffa: [],
       team: [],
       special: [],
       hosted: [
         hostedLobby("g1", "hash", {
           gameConfig: {
-            gameMap,
+            gameMap: GameMapType.Earth,
             difficulty: Difficulty.Easy,
             donateGold: false,
             donateTroops: false,
@@ -934,7 +934,7 @@ describe("WorkerLobbyService hosted lobbies", () => {
             gameMode: GameMode.FFA,
             gameMapSize: GameMapSize.Normal,
             nations: "default",
-            bots: 0,
+            bots,
             infiniteGold: false,
             infiniteTroops: false,
             instantBuild: false,
@@ -944,9 +944,9 @@ describe("WorkerLobbyService hosted lobbies", () => {
       ],
     });
 
-    emitBroadcast(games(GameMapType.World), 1000);
-    emitBroadcast(games(GameMapType.World), 2000); // unchanged -> counts delta
-    emitBroadcast(games(GameMapType.Europe), 3000); // host changed map -> fresh full
+    emitBroadcast(games(0), 1000);
+    emitBroadcast(games(0), 2000); // unchanged -> counts delta
+    emitBroadcast(games(10), 3000); // host changed the bots -> fresh full
 
     const types = sentPayloads(ws).map((p) => p.type);
     expect(types).toEqual(["full", "counts", "full"]);

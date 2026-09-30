@@ -44,7 +44,11 @@ export class TestDataMapLoader implements GameMapLoader {
   constructor(private mapName: string) {}
 
   getMapData(): MapData {
-    const dir = path.join(__dirname, `../testdata/maps/${this.mapName}`);
+    // Earth is too big to copy into testdata, so it is read from resources/maps.
+    const local = path.join(__dirname, `../testdata/maps/${this.mapName}`);
+    const dir = fs.existsSync(local)
+      ? local
+      : path.join(__dirname, `../../resources/maps/${this.mapName}`);
     const read = (name: string) => async () =>
       new Uint8Array(fs.readFileSync(path.join(dir, name)));
     return {
@@ -72,7 +76,7 @@ export function scriptedGameStart(
     gameID: "SNAPTEST1",
     lobbyCreatedAt: 0,
     config: {
-      gameMap: GameMapType.World,
+      gameMap: GameMapType.Earth,
       gameMapSize: GameMapSize.Compact,
       gameMode: GameMode.FFA,
       gameType: GameType.Private,

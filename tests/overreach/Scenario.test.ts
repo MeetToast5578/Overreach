@@ -26,7 +26,7 @@ import { expectSnapshotRoundTrip } from "../util/Snapshot";
 function bands(w: number, h: number): Scenario {
   return {
     version: 1,
-    map: GameMapType.World,
+    map: GameMapType.Earth,
     mapSize: GameMapSize.Normal,
     nations: [
       { id: "northland", name: "Northland", color: "#aa0000", flag: "fr" },
@@ -181,13 +181,13 @@ describe("Scenario", () => {
     await expectSnapshotRoundTrip(game, "plains", 5);
   });
 
-  test("World 1836 is a valid scenario for the World map", () => {
+  test("World 1836 is a valid scenario for the Earth map", () => {
     const res = path.join(__dirname, "../../resources");
     const read = (f: string) =>
       JSON.parse(fs.readFileSync(path.join(res, f), "utf8"));
     const s = ScenarioSchema.parse(read("scenarios/world-1836.json"));
-    const { width, height } = read("maps/world/manifest.json").map;
-    expect(s.map).toBe(GameMapType.World);
+    const { width, height } = read("maps/earth/manifest.json").map;
+    expect(s.map).toBe(GameMapType.Earth);
     expect(forEachOwnedTile(s.owners, () => {})).toBe(width * height);
     expect(s.nations.length).toBeGreaterThan(150);
     for (const n of s.nations) {

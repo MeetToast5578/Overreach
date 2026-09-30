@@ -142,7 +142,7 @@ describe("Named cities", () => {
       JSON.parse(fs.readFileSync(file, "utf8")),
     );
     const runner = await createScriptedRunner(
-      "world",
+      "earth",
       scriptedGameStart({
         gameMapSize: GameMapSize.Normal,
         nations: "disabled",

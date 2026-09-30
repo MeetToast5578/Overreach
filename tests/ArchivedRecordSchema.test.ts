@@ -26,7 +26,7 @@ function oldRecord() {
       winner: ["player", "abCD1234"],
       config: {
         // no `nations` — predates configurable nation count
-        gameMap: "Africa",
+        gameMap: "Earth",
         difficulty: "Medium",
         donateGold: true,
         donateTroops: true,
@@ -99,13 +99,13 @@ describe("ArchivedAnalyticsRecordSchema", () => {
 
   test("normalizes accidental whitespace around an archived map name", () => {
     const record = oldRecord();
-    record.info.config.gameMap = "Deglaciated Antarctica ";
+    record.info.config.gameMap = "Earth ";
 
     const result = ArchivedAnalyticsRecordSchema.safeParse(record);
 
     expect(result.success).toBe(true);
     if (!result.success) return;
-    expect(result.data.info.config.gameMap).toBe("Deglaciated Antarctica");
+    expect(result.data.info.config.gameMap).toBe("Earth");
   });
 
   // Client-archived singleplayer records are stored by the API worker exactly

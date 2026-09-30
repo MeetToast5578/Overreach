@@ -32,7 +32,7 @@ function makeAdditionalNations(names: string[]): AdditionalNation[] {
 
 function makeGameStart(targetNations: number): GameStartInfo {
   const config: GameConfig = {
-    gameMap: GameMapType.World,
+    gameMap: GameMapType.Earth,
     gameMapSize: GameMapSize.Normal,
     gameMode: GameMode.FFA,
     gameType: GameType.Singleplayer,

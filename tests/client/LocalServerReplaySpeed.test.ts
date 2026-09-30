@@ -29,7 +29,7 @@ function makeGameStartInfo(): GameStartInfo {
     gameID: "gameID12",
     lobbyCreatedAt: 1000,
     config: {
-      gameMap: "Africa",
+      gameMap: "Earth",
       difficulty: "Medium",
       donateGold: false,
       donateTroops: false,

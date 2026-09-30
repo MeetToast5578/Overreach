@@ -69,7 +69,6 @@ type UsernameInput = {
   getClanTag(): string | null;
 };
 
-
 /**
  * Ceiling on the CrazyGames midgame ad, deliberately far above
  * START_PREPARE_DEADLINE_MS: an ad creative routinely runs 15-30s and it has
@@ -103,7 +102,7 @@ type StartPreparation = {
 };
 
 const DEFAULT_OPTIONS = {
-  selectedMap: GameMapType.World,
+  selectedMap: GameMapType.Earth,
   selectedDifficulty: Difficulty.Easy,
   bots: 400,
   infiniteGold: false,

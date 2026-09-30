@@ -669,7 +669,7 @@ SUBJECTS = [
 # Town positions (lon, lat) where the World map's coast is off: it draws
 # Zealand's east shore ~0.3 degrees west, so the real Copenhagen is in the sea
 # next to Sweden. Lisbon's own tile is its neighbour's.
-TOWN_AT = {"Copenhagen": (12.3, 55.68), "Lisbon": (-9.0, 38.76)}
+TOWN_AT = {}
 
 # (town, GeoNames country code, owner): ROADMAP.md 3.3 plus capitals.
 CHECKS = [

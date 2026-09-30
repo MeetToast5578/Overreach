@@ -107,7 +107,7 @@ describe("Endings", () => {
   test("a calendar game ends through CalendarExecution, and a snapshot keeps it", async () => {
     const scenario: Scenario = {
       version: 1,
-      map: GameMapType.World,
+      map: GameMapType.Earth,
       mapSize: GameMapSize.Normal,
       nations: [{ id: "oldworld", name: "Old World" }],
       alliances: [],

@@ -17,7 +17,7 @@ async function pairWins(seed: string, allied: boolean): Promise<boolean> {
     bots: 0,
     scenario: {
       version: 1,
-      map: GameMapType.World,
+      map: GameMapType.Earth,
       mapSize: GameMapSize.Normal,
       nations: [
         { id: "greatpow", name: "Great Power" },

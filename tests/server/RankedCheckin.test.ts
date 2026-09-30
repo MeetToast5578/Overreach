@@ -30,8 +30,8 @@ function makeDeps(
       createGame: vi.fn().mockReturnValue({}),
     } as any,
     playlist: {
-      get1v1Config: vi.fn().mockReturnValue({ gameMap: "Europe" }),
-      get2v2Config: vi.fn().mockReturnValue({ gameMap: "Europe" }),
+      get1v1Config: vi.fn().mockReturnValue({ gameMap: "Earth" }),
+      get2v2Config: vi.fn().mockReturnValue({ gameMap: "Earth" }),
     } as any,
     workerId: 0,
     log,
