@@ -50,6 +50,7 @@ import {
   ToggleRenderDebugGuiEvent,
 } from "./InputHandler";
 import { pagePin } from "./PagePin";
+import { leftClickSelects, selectTile } from "./overreach/Selection";
 import { versionedPathForMismatchedGame } from "./ServerList";
 import { reportGameError } from "./Telemetry";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
@@ -1207,6 +1208,10 @@ export class ClientGameRunner {
     }
     console.log(`clicked cell ${cell}`);
     const tile = this.gameView.ref(cell.x, cell.y);
+    if (leftClickSelects(this.gameView)) {
+      selectTile(this.gameView, tile); // Overreach: a left click selects
+      return;
+    }
     if (
       this.gameView.isLand(tile) &&
       !this.gameView.hasOwner(tile) &&

@@ -75,6 +75,11 @@ import {
 } from "../../src/client/ClientGameRunner";
 import { MouseUpEvent } from "../../src/client/InputHandler";
 import {
+  provinceLayer,
+  startProvinceLayer,
+} from "../../src/client/overreach/ProvinceLayer";
+import { selection } from "../../src/client/overreach/Selection";
+import {
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
   SendSpawnIntentEvent,
@@ -90,6 +95,7 @@ function makeRunner(overrides: {
   playerByClientID?: () => unknown;
   actions?: Record<string, unknown>;
   boatDistSquared?: number;
+  startYear?: number;
 }) {
   const eventBus = new EventBus();
   const myPlayer = {
@@ -97,12 +103,21 @@ function makeRunner(overrides: {
     troops: () => 100,
   };
   const gameView = {
-    config: () => ({ isRandomSpawn: () => false, isReplay: () => false }),
+    config: () => ({
+      isRandomSpawn: () => false,
+      isReplay: () => false,
+      gameConfig: () =>
+        overrides.startYear === undefined
+          ? {}
+          : { scenario: { startYear: overrides.startYear } },
+    }),
     inSpawnPhase: () => overrides.inSpawnPhase ?? false,
     myPlayer: () => null,
     isValidCoord: () => true,
     ref: () => TILE,
     isLand: () => true,
+    isImpassable: () => false,
+    ownerID: () => 3,
     hasOwner: () => overrides.hasOwner ?? false,
     owner: () => ({ id: () => "enemy1" }),
     playerByClientID: vi.fn(overrides.playerByClientID ?? (() => myPlayer)),
@@ -174,6 +189,24 @@ describe("left click", () => {
     expect(attacks).toHaveLength(1);
     expect(attacks[0].targetID).toBe("enemy1");
     expect(attacks[0].troops).toBe(50); // 100 troops * 0.5 attack ratio
+  });
+
+  it("in a calendar game selects the province instead of attacking", async () => {
+    startProvinceLayer(10, 10);
+    provinceLayer!.prov[TILE] = 7;
+    const { eventBus } = makeRunner({
+      hasOwner: true,
+      actions: { canAttack: true, buildableUnits: [] },
+      startYear: 1836,
+    });
+    const attacks: SendAttackIntentEvent[] = [];
+    eventBus.on(SendAttackIntentEvent, (e) => attacks.push(e));
+
+    eventBus.emit(new MouseUpEvent(CLICK.x, CLICK.y));
+    await flushPromises();
+
+    expect(attacks).toHaveLength(0);
+    expect(selection.get()).toEqual({ tile: TILE, province: 7, owner: 3 });
   });
 
   it("does nothing when the player is not in the view yet", async () => {

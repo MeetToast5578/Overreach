@@ -356,7 +356,7 @@ export function createRenderer(
     tutorialPanel,
     alertFrame,
     performanceOverlay,
-    ...overreachLayers(game, eventBus, transformHandler),
+    ...overreachLayers(game, eventBus, transformHandler, view),
   ];
 
   return new GameRenderer(

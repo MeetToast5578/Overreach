@@ -7,6 +7,12 @@ import type { RenderSettings } from "../render/gl/RenderSettings";
 import overlayVertSrc from "../render/gl/shaders/map-overlay/overlay.vert.glsl?raw";
 import { renderDpr } from "../render/gl/utils/Dpr";
 import { createMapQuad, createProgram } from "../render/gl/utils/GlUtils";
+import {
+  paintsProvinces,
+  palette,
+  PALETTE_WIDTH,
+  paletteState,
+} from "./MapMode";
 import { provinceLayer, type ProvinceLayer } from "./ProvinceLayer";
 
 // Province borders and place names (Overreach, SANDBOX.md F4 and F5), drawn
@@ -54,21 +60,43 @@ void main() {
 }
 `;
 
+// A map mode paints each province from a palette (MapMode.ts): its id picks a colour.
+const modeFragSrc = `#version 300 es
+precision highp float;
+precision highp int;
+precision highp usampler2D;
+
+in vec2 vWorldPos;
+uniform usampler2D uProv;
+uniform sampler2D uPalette;
+uniform vec2 uMapSize;
+out vec4 outColor;
+
+void main() {
+  ivec2 t = ivec2(floor(vWorldPos));
+  if (t.x < 0 || t.y < 0 || t.x >= int(uMapSize.x) || t.y >= int(uMapSize.y)) discard;
+  uint p = texelFetch(uProv, t, 0).r;
+  if (p == 0u) discard;
+  vec4 c = texelFetch(uPalette, ivec2(int(p & 255u), int(p >> 8)), 0);
+  if (c.a == 0.0) discard;
+  outColor = c;
+}
+`;
+
 // Borders show from this zoom (device pixels per tile), fully by FULL_ZOOM.
 const MIN_ZOOM = 1.5;
 const FULL_ZOOM = 4;
 const BORDER_ALPHA = 0.5;
 // A town shows once its population is at least TOWN_POP / zoom² (zoom in
-// CSS pixels per tile): 500k at 2, 31k at 8 (1836 people). A province
+// CSS pixels per tile): 1.25M at 2, 78k at 8 (1836 people, on a 2000-wide map). A province
 // without a town counts TILE_PEOPLE per tile, so it shows once it's about
-// 45 px across.
+// 70 px across. Nation names (CountryNames.ts) fade out as these come in.
 // Both are for a 2000-wide map; a wider one has smaller tiles, so they scale
 // by (2000 / its width)² and the same stretch of the world shows the same names.
-const TOWN_POP = 2_000_000;
+const TOWN_POP = 5_000_000;
 const TILE_PEOPLE = 1_000;
 const REF_MAP_WIDTH = 2000;
 const MAX_NAMES = 300;
-const CENTROID_EVERY_MS = 1000;
 
 export class ProvincePass {
   private program: WebGLProgram;
@@ -79,13 +107,12 @@ export class ProvincePass {
   private uLine: WebGLUniformLocation;
   private uAlpha: WebGLUniformLocation;
   private layer: ProvinceLayer | null = null;
+  private modeProgram: WebGLProgram;
+  private modeCamera: WebGLUniformLocation;
+  private modeMapSize: WebGLUniformLocation;
+  private paletteTex: WebGLTexture;
+  private paletteSeen = -1;
   private names: WorldTextPass;
-  // Province centres: sum of x, sum of y and tile count per id.
-  private cx = new Float64Array(0);
-  private cy = new Float64Array(0);
-  private count = new Float64Array(0);
-  private centroidVersion = -1;
-  private centroidAt = 0;
 
   constructor(
     private gl: WebGL2RenderingContext,
@@ -108,6 +135,20 @@ export class ProvincePass {
     for (const p of [gl.TEXTURE_MIN_FILTER, gl.TEXTURE_MAG_FILTER]) {
       gl.texParameteri(gl.TEXTURE_2D, p, gl.NEAREST);
     }
+    this.modeProgram = createProgram(gl, overlayVertSrc, modeFragSrc);
+    this.modeCamera = gl.getUniformLocation(this.modeProgram, "uCamera")!;
+    this.modeMapSize = gl.getUniformLocation(this.modeProgram, "uMapSize")!;
+    gl.useProgram(this.modeProgram);
+    gl.uniform1i(gl.getUniformLocation(this.modeProgram, "uProv"), 0);
+    gl.uniform1i(gl.getUniformLocation(this.modeProgram, "uPalette"), 1);
+    this.paletteTex = gl.createTexture()!;
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, this.paletteTex);
+    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, PALETTE_WIDTH, PALETTE_WIDTH);
+    for (const p of [gl.TEXTURE_MIN_FILTER, gl.TEXTURE_MAG_FILTER]) {
+      gl.texParameteri(gl.TEXTURE_2D, p, gl.NEAREST);
+    }
+    gl.activeTexture(gl.TEXTURE0);
     this.names = new WorldTextPass(gl, settings, config);
     this.names.setMapWidth(mapW);
   }
@@ -131,6 +172,42 @@ export class ProvincePass {
     gl.drawArrays(gl.TRIANGLES, 0, 6);
   }
 
+  // The province colours of the current map mode, over the territory (the renderer calls this
+  // right after it).
+  drawMode(cameraMatrix: Float32Array): void {
+    const layer = provinceLayer;
+    if (layer === null || layer.width !== this.mapW || !paintsProvinces()) {
+      return;
+    }
+    const gl = this.gl;
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this.tex);
+    this.upload(layer);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, this.paletteTex);
+    if (this.paletteSeen !== paletteState.version) {
+      this.paletteSeen = paletteState.version;
+      gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+      gl.texSubImage2D(
+        gl.TEXTURE_2D,
+        0,
+        0,
+        0,
+        PALETTE_WIDTH,
+        PALETTE_WIDTH,
+        gl.RGBA,
+        gl.UNSIGNED_BYTE,
+        palette,
+      );
+    }
+    gl.useProgram(this.modeProgram);
+    gl.uniformMatrix3fv(this.modeCamera, false, cameraMatrix);
+    gl.uniform2f(this.modeMapSize, this.mapW, this.mapH);
+    gl.bindVertexArray(this.vao);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    gl.activeTexture(gl.TEXTURE0);
+  }
+
   drawNames(cameraMatrix: Float32Array, zoom: number): void {
     const layer = provinceLayer;
     if (layer === null || layer.width !== this.mapW) return;
@@ -141,6 +218,8 @@ export class ProvincePass {
 
   dispose(): void {
     this.gl.deleteProgram(this.program);
+    this.gl.deleteProgram(this.modeProgram);
+    this.gl.deleteTexture(this.paletteTex);
     this.gl.deleteVertexArray(this.vao);
     this.gl.deleteTexture(this.tex);
     this.names.dispose();
@@ -181,7 +260,6 @@ export class ProvincePass {
     const css = zoom / renderDpr();
     const scale = (REF_MAP_WIDTH / this.mapW) ** 2;
     const minPop = (TOWN_POP * scale) / (css * css);
-    this.updateCentroids(layer);
     // The visible world: clip space [-1, 1] back through the camera.
     const xs = [(-1 - m[6]) / m[0], (1 - m[6]) / m[0]];
     const ys = [(-1 - m[7]) / m[4], (1 - m[7]) / m[4]];
@@ -194,13 +272,13 @@ export class ProvincePass {
       shown.push({ n, label });
     };
     const w = this.mapW;
-    for (let id = 1; id < this.count.length; id++) {
+    for (let id = 1; id < layer.count.length; id++) {
       const rec = layer.records[id];
-      const tiles = this.count[id];
+      const tiles = layer.count[id];
       if (!rec || tiles === 0) continue;
       const people = tiles * TILE_PEOPLE * scale;
       if (rec.capital === null) {
-        add(this.cx[id] / tiles, this.cy[id] / tiles, rec.name, people);
+        add(layer.cx[id] / tiles, layer.cy[id] / tiles, rec.name, people);
       } else {
         const x = (rec.capital % w) + 0.5;
         const y = Math.floor(rec.capital / w) + 0.5;
@@ -235,31 +313,5 @@ export class ProvincePass {
       if (out.length === MAX_NAMES) break;
     }
     return out;
-  }
-
-  private updateCentroids(layer: ProvinceLayer): void {
-    const now = performance.now();
-    if (
-      layer.version === this.centroidVersion ||
-      now - this.centroidAt < CENTROID_EVERY_MS
-    ) {
-      return;
-    }
-    this.centroidVersion = layer.version;
-    this.centroidAt = now;
-    const n = Math.max(layer.records.length, 1);
-    this.cx = new Float64Array(n);
-    this.cy = new Float64Array(n);
-    this.count = new Float64Array(n);
-    const w = this.mapW;
-    for (let y = 0, t = 0; y < this.mapH; y++) {
-      for (let x = 0; x < w; x++, t++) {
-        const id = layer.prov[t];
-        if (id === 0 || id >= n) continue;
-        this.cx[id] += x + 0.5;
-        this.cy[id] += y + 0.5;
-        this.count[id]++;
-      }
-    }
   }
 }

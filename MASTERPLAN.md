@@ -409,6 +409,27 @@ one commit per slice.
 - Map modes: the framework plus political, terrain, provinces, diplomatic and population. Curved country names.
 - **Save and load:** a save is a core snapshot. Loading starts a new game whose first tick restores it, the way
   `ScenarioExecution` places a scenario, so the worker is never rebuilt mid-game. A yearly autosave goes to IndexedDB.
+  **Status (30 Sep 2026): in progress. Built so far:**
+
+- **Left click selects** in a calendar game (one hook in `ClientGameRunner.inputEvent`); the right-click wheel still attacks
+  and builds. A click picks a province and its owner.
+- **Top bar** (`TopBar.ts`): your flag and name, gold with its income a second, troops of their cap (each with a tooltip),
+  and the date with the era.
+- **Selection window** (`SelectionWindow.ts`): Province (owner, capital, people, growth, land, terrain, buildings) and Nation
+  (land, provinces, people, troops, gold, overlord, subjects, a Diplomacy button that opens OpenFront's panel). Esc closes it.
+- **Outliner** (`Outliner.ts`): attacks, allies, subjects, overlord. Wars join it in G3.
+- **Country names** (`CountryNames.ts`): each nation's name along a curve through its main landmass, sized to it, in
+  the nation's light or dark text. They fade as you zoom in and province names take over. OpenFront's name boxes are off
+  (`Renderer.setHideNationNames`). The province centroids behind this are now kept incrementally in `ProvinceLayer`, so the
+  renderer no longer rescans 22M tiles a second.
+- **Map modes** (`MapModes.ts`, `MapMode.ts`, a pass in `ProvincePass`): Political, Terrain (relief only), Provinces,
+  Diplomatic (you, allies, subjects and overlords, enemies) and Population, each with a legend.
+- **Look:** dark panels with brass edges (`overreach.css`); OpenFront's leaderboard is hidden in these games.
+- **Checked:** 16 new tests (geometry, palettes, centroids, selection); in headless Chrome the windows, names and all
+  five map modes render over Europe, and a click on Bavaria opens Munich's province and Bavaria's nation.
+- **Still to do in G2:** save and load, the title screen's start dates and nation picking on the map, hotkeys, an alerts
+  row and the event window's new look, and tooltips that break numbers down.
+
 - **Done when:** you can start 1836 as Prussia by clicking it, read any province and nation, switch map modes, save in
   1840 and load it, and never see an OpenFront menu.
 

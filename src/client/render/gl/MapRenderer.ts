@@ -361,6 +361,10 @@ export class MapRenderer {
   setLocalRailColor(r: number, g: number, b: number): void {
     this.renderer?.setLocalRailColor(r, g, b);
   }
+  setHideNationNames(hide: boolean): void {
+    this.renderer?.setHideNationNames(hide);
+  }
+
   setAltView(active: boolean): void {
     this.renderer?.setAltView(active);
   }

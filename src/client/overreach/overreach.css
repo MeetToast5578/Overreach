@@ -11,3 +11,47 @@ single-player-modal button.bg-yellow-500\/20 {
 body.overreach-sandbox tutorial-panel {
   display: none !important;
 }
+
+/* The grand-strategy look (MASTERPLAN.md section 4): dark panels with brass edges and a serif for
+   titles. Used by the top bar, the selection window and the outliner. */
+.ov-panel {
+  background: rgba(17, 20, 27, 0.93);
+  border-color: #8a6d3b;
+  color: #e9e2d0;
+  backdrop-filter: blur(6px);
+}
+.ov-title {
+  color: #e8c98a;
+  font-family: Georgia, "Times New Roman", serif;
+  letter-spacing: 0.04em;
+}
+.ov-tab {
+  padding: 2px 10px;
+  border-radius: 4px;
+  color: rgba(233, 226, 208, 0.6);
+}
+.ov-tab:hover,
+.ov-tab-on {
+  color: #e8c98a;
+  background: rgba(138, 109, 59, 0.22);
+}
+.ov-button {
+  border: 1px solid #8a6d3b;
+  border-radius: 4px;
+  background: rgba(138, 109, 59, 0.18);
+  padding: 4px 8px;
+  color: #e8c98a;
+}
+.ov-button:hover {
+  background: rgba(138, 109, 59, 0.35);
+}
+
+/* A calendar game swaps OpenFront's leaderboard for the top bar and windows. */
+body.overreach-gsg game-left-sidebar {
+  display: none !important;
+}
+
+/* OpenFront's hover box sits below the top bar, not over it. */
+body.overreach-gsg player-info-overlay .fixed {
+  margin-top: 42px !important;
+}

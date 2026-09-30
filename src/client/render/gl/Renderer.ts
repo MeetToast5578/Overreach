@@ -11,6 +11,7 @@
 
 import type { Config } from "../../../core/configuration/Config";
 import type { MapLayer } from "../../../core/game/TerrainMapLoader";
+import { hidesTerritory } from "../../overreach/MapMode";
 import { ProvincePass } from "../../overreach/ProvincePass";
 import { translateText } from "../../Utils";
 import type { SpiralRibbon } from "../frame/SpiralTrails";
@@ -200,6 +201,8 @@ export class GPURenderer {
 
   // Alt-view: affiliation recoloring (space hold)
   private altView = false;
+  // Overreach draws nation names itself (overreach/CountryNames.ts).
+  private hideNationNames = false;
   // Grid-view: coordinate grid overlay (M toggle)
   private gridView = false;
 
@@ -1156,6 +1159,10 @@ export class GPURenderer {
     this.samRadiusPass.setAllianceClusters(clusters);
   }
 
+  setHideNationNames(hide: boolean): void {
+    this.hideNationNames = hide;
+  }
+
   setAltView(active: boolean): void {
     this.altView = active;
     this.territoryPass.setAltView(active);
@@ -1353,7 +1360,8 @@ export class GPURenderer {
     for (const layerPass of this.mapLayerPasses.values()) {
       layerPass.draw(cam);
     }
-    if (pe.territory) this.territoryPass.draw(cam);
+    if (pe.territory && !hidesTerritory()) this.territoryPass.draw(cam);
+    this.provincePass.drawMode(cam); // Overreach: a map mode's province colours
   }
 
   private renderOverlays(cam: Float32Array, zoom: number): void {
@@ -1365,7 +1373,7 @@ export class GPURenderer {
 
     this.spawnOverlayPass.draw(cam);
     this.provincePass.drawBorders(cam, zoom); // Overreach, under the borders
-    if (pe.borderStamp) this.borderStampPass.draw(cam);
+    if (pe.borderStamp && !hidesTerritory()) this.borderStampPass.draw(cam);
     if (pe.railroad) this.railroadPass.draw(cam, zoom);
     if (pe.unit) this.unitPass.drawGround(cam);
     if (pe.falloutBloom) this.bloomPass.draw(cam, this.frameTick);
@@ -1397,7 +1405,7 @@ export class GPURenderer {
     // hold), not under the persistent M-key gridView toggle.
     if (this.gridView || this.altView) this.coordinateGridPass.draw(cam, zoom);
     if (pe.name && !this.altView) this.provincePass.drawNames(cam, zoom);
-    if (pe.name && !this.altView)
+    if (pe.name && !this.altView && !this.hideNationNames)
       this.namePass.draw(cam, this.nightCompositePass.getAmbient());
 
     // World text (attack-troop labels, popups, ghost cost) draws on top of
