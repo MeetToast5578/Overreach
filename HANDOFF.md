@@ -13,9 +13,11 @@ pre-fork engine; it's read-only.
   left-click selection, top bar, province and nation windows, outliner, curved country names, five map modes, save and
   load, the new-game page with nation picking, the alerts row, the event window's look, and top-bar tooltips with
   breakdowns. Left: the event log (bottom left, with filters), and the G1 checks below. Then G3.
-- **Not pushed:** `main` is ahead of `origin` (`MeetToast5578/Overreach`, private). The owner allowed commits, not pushes.
-  They said (30 Sep 2026) to automate everything since it's a private project with nothing to lose; that covered local
-  commits and builds. Pushing, deploying and going public were never done or authorized.
+- **Pushed and merged:** on 1 Oct 2026 the session branch `arena/01a0f611-overreach` was pushed, opened as PR #1 and
+  merged into `main` (merge commit `a670361`, 12:09 UTC) — G2's new-game page, alerts row, event window and tooltips are
+  on `main` now. The branch stays the place to work and is even with `main` apart from this note. The repo reports
+  **public** (`gh repo view --json isPrivate` → `false`), contradicting the old note here; the owner hasn't confirmed that
+  decision. Deploying `static-site/` and wiring the Source link are still not authorized.
 - **The client is single-player only.** OpenFront's home page, lobbies, accounts, store, clans and ads are deleted
   (G0). `overreach/Title.ts` is the title screen (Continue, New game, Sandbox, Help, Settings, saved games). The server
   in `src/server/` still exists for multiplayer (G10).
@@ -35,11 +37,10 @@ Don't do these without the owner's go-ahead.
 1. **G1 sign-off:** look at World 1836 on screen in Europe, the Americas, India and Africa. The game also needs a check on
    a real GPU: the Earth map's textures are 22M pixels, and I could only test on a software renderer (see G1's status).
    If it's too heavy, `build_earth.py --width 5632` is the fallback.
-2. **Push** the commits.
-3. **Deploy** `static-site/` (fits GitHub Pages and Cloudflare Pages; the biggest files are the 22 MB map and 16 MB relief).
-4. **Make the repo public and wire up the Source link** (`src/client/components/Footer.ts`, `SOURCE_URL`) before anyone
-   else plays (AGPL).
-5. **npm 12.1.0:** `npm i -g npm@12.1.0` (possible since 29 Sep 2026, 17:11 UTC). After that `npm run inst` works and the
+2. **Deploy** `static-site/` (fits GitHub Pages and Cloudflare Pages; the biggest files are the 22 MB map and 16 MB relief).
+3. **Wire up the Source link** (`src/client/components/Footer.ts`, `SOURCE_URL`) before anyone else plays (AGPL). The repo
+   now reports public, so this is the remaining half of the old "make it public" item — confirm with the owner first.
+4. **npm 12.1.0:** `npm i -g npm@12.1.0` (possible since 29 Sep 2026, 17:11 UTC). After that `npm run inst` works and the
    `--engine-strict=false` workaround in `CLAUDE.md` can go.
 
 ## Rebuilding the map and the scenario
