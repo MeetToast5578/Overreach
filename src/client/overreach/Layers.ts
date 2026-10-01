@@ -4,6 +4,7 @@ import type { Controller } from "../Controller";
 import type { MapRenderer } from "../render/gl";
 import type { TransformHandler } from "../TransformHandler";
 import type { GameView } from "../view";
+import { createAlerts } from "./Alerts";
 import { createCountryNames } from "./CountryNames";
 import { createMapModes } from "./MapModes";
 import { createOutliner } from "./Outliner";
@@ -34,6 +35,7 @@ export function overreachLayers(
     createSelectionWindow(game, eventBus),
     createOutliner(game),
     createMapModes(game),
+    createAlerts(game, eventBus),
     createStoryPanel(game, eventBus),
   ].filter((c): c is NonNullable<typeof c> => c !== null);
 }

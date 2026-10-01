@@ -1,6 +1,7 @@
 import { html, LitElement, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { assetUrl } from "../../core/AssetUrls";
+import { UnitType } from "../../core/game/Game";
 import { startYear, yearAt } from "../../core/overreach/Calendar";
 import type { Controller } from "../Controller";
 import { renderNumber, renderTroops, translateText } from "../Utils";
@@ -9,6 +10,29 @@ import { dateText } from "./DateText";
 import { saveGame } from "./Saves";
 
 const AUTOSAVE_EVERY_YEARS = 5;
+
+/** One line of a breakdown tooltip: where a number came from, and how much. */
+function row(label: string, value: string) {
+  return html`<div class="flex justify-between gap-6">
+    <span class="text-white/60">${label}</span><span>${value}</span>
+  </div>`;
+}
+
+/**
+ * The troop cap's parts, as Config.maxTroops builds it for a human:
+ * 2 x (land^0.6 x 1000 + 50,000) + city levels x cityTroopIncrease. `other` is
+ * whatever the cap holds beyond those two (settings or a difficulty rule).
+ */
+export function troopCapParts(
+  tiles: number,
+  cityLevels: number,
+  cityTroopIncrease: number,
+  cap: number,
+): { land: number; cities: number; other: number } {
+  const land = Math.round(2 * (Math.pow(tiles, 0.6) * 1000 + 50_000));
+  const cities = Math.round(cityLevels * cityTroopIncrease);
+  return { land, cities, other: Math.round(cap) - land - cities };
+}
 
 const coin = html`<svg
   viewBox="0 0 24 24"
@@ -55,6 +79,8 @@ export class TopBar extends LitElement implements Controller {
   @state() private income = 0;
   @state() private troops = 0;
   @state() private maxTroops = 0;
+  @state() private cap = { land: 0, cities: 0, other: 0 };
+  @state() private cityLevels = 0;
   @state() private name = "";
   @state() private flag = "";
   @state() private notice = "";
@@ -90,7 +116,18 @@ export class TopBar extends LitElement implements Controller {
     this.flag = me.cosmetics.flag ?? "";
     this.gold = Number(me.gold());
     this.troops = me.troops();
-    this.maxTroops = this.game.config().maxTroops(me);
+    const config = this.game.config();
+    this.maxTroops = config.maxTroops(me);
+    this.cityLevels = me
+      .units(UnitType.City)
+      .filter((u) => !u.isUnderConstruction())
+      .reduce((a, u) => a + u.level(), 0);
+    this.cap = troopCapParts(
+      me.numTilesOwned(),
+      this.cityLevels,
+      config.cityTroopIncrease(),
+      this.maxTroops,
+    );
     // Gold earned over the last stretch of game time, per second (10 ticks).
     const earned = me.goldEarned();
     const dt = this.ticks - this.last.tick;
@@ -136,30 +173,67 @@ export class TopBar extends LitElement implements Controller {
                 : nothing}
               <span class="ov-title">${this.name}</span>
             </div>
-            <div
-              class=${chip}
-              title=${translateText("gsg.gold_tip", {
-                gold: renderNumber(this.gold),
-                rate: renderNumber(Math.round(this.income)),
-              })}
-            >
+            <div class="${chip} ov-tip-wrap">
               ${coin}<span>${renderNumber(this.gold)}</span
               ><span class="text-xs text-emerald-300"
                 >+${renderNumber(Math.round(this.income))}/s</span
               >
+              <div class="ov-tip">
+                <div class="ov-title mb-1">${translateText("gsg.gold")}</div>
+                ${row(translateText("gsg.gold_now"), renderNumber(this.gold))}
+                ${row(
+                  translateText("gsg.gold_income"),
+                  `+${renderNumber(Math.round(this.income))} /s`,
+                )}
+                <div class="mt-1 text-white/50">
+                  ${translateText("gsg.gold_source")}
+                </div>
+              </div>
             </div>
-            <div
-              class=${chip}
-              title=${translateText("gsg.troops_tip", {
-                troops: renderTroops(this.troops),
-                max: renderTroops(this.maxTroops),
-              })}
-            >
+            <div class="${chip} ov-tip-wrap">
               ${people}<span
                 >${renderTroops(this.troops)}<span class="text-white/50">
                   / ${renderTroops(this.maxTroops)}</span
                 ></span
               >
+              <div class="ov-tip">
+                <div class="ov-title mb-1">
+                  ${translateText("gsg.troops_label")}
+                </div>
+                ${row(
+                  translateText("gsg.troops_now"),
+                  renderTroops(this.troops),
+                )}
+                ${row(
+                  translateText("gsg.troops_cap"),
+                  renderTroops(this.maxTroops),
+                )}
+                <div
+                  class="mt-1 border-t border-[#8a6d3b]/50 pt-1 text-white/50"
+                >
+                  ${translateText("gsg.troops_cap_breakdown")}
+                </div>
+                ${row(
+                  translateText("gsg.troops_from_land", {
+                    tiles: renderNumber(
+                      this.game.myPlayer()?.numTilesOwned() ?? 0,
+                    ),
+                  }),
+                  renderTroops(this.cap.land),
+                )}
+                ${row(
+                  translateText("gsg.troops_from_cities", {
+                    levels: renderNumber(this.cityLevels),
+                  }),
+                  renderTroops(this.cap.cities),
+                )}
+                ${this.cap.other !== 0
+                  ? row(
+                      translateText("gsg.troops_from_settings"),
+                      renderTroops(this.cap.other),
+                    )
+                  : nothing}
+              </div>
             </div>`}
       <div class="ml-auto flex items-center gap-3">
         ${this.notice === ""

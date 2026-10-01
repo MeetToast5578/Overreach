@@ -187,10 +187,13 @@ export class LocalServer {
         }
         return;
       }
-      // Overreach sandbox: edits made while paused still apply (see forceTurns).
+      // Overreach: edits made while paused still apply (see forceTurns), and so
+      // do the player's own decisions - an event window pauses the game to ask
+      // for one.
       if (
         this.paused &&
-        stampedIntent.type === "sandbox" &&
+        (stampedIntent.type === "sandbox" ||
+          stampedIntent.type === "overreach") &&
         !this.lobbyConfig.gameRecord
       ) {
         this.intents.push(stampedIntent);

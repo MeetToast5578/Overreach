@@ -46,6 +46,68 @@ body.overreach-sandbox tutorial-panel {
   background: rgba(138, 109, 59, 0.35);
 }
 
+/* A number that explains itself (MASTERPLAN.md 4.2): the chip carries a breakdown that opens
+   on hover. Used by the top bar; the windows use the same box. */
+.ov-tip-wrap {
+  position: relative;
+}
+.ov-tip {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: calc(100% + 6px);
+  z-index: 300;
+  min-width: 220px;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  background: rgba(17, 20, 27, 0.97);
+  border: 1px solid #8a6d3b;
+  border-radius: 6px;
+  color: #e9e2d0;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+.ov-tip-wrap:hover .ov-tip {
+  display: block;
+}
+.ov-tip-wrap:last-child .ov-tip {
+  left: auto;
+  right: 0;
+}
+
+/* The alerts row: what is asking for the player. It pulses until it is answered. */
+.ov-alert {
+  color: #f0e3c2;
+  animation: ov-alert-pulse 2s ease-in-out infinite;
+}
+.ov-alert:hover {
+  animation: none;
+  border-color: #c9a45c;
+}
+@keyframes ov-alert-pulse {
+  50% {
+    box-shadow: 0 0 0 3px rgba(232, 201, 138, 0.22);
+    border-color: #c9a45c;
+  }
+}
+
+/* The event window: the option whose effect you are weighing lights up. */
+.ov-event-option:hover {
+  background: rgba(138, 109, 59, 0.42);
+  border-color: #c9a45c;
+}
+.ov-event-flash {
+  box-shadow:
+    0 0 0 4px rgba(232, 201, 138, 0.5),
+    0 20px 40px rgba(0, 0, 0, 0.5);
+}
+
+/* The new-game page is a full screen with the world on it, not one of OpenFront's narrow
+   content pages: let it use the width its modal asks for (main-layout caps pages at 20cm/24cm). */
+body.page-open:has(#page-new-game:not(.hidden)) main-layout > main > div {
+  max-width: 1400px;
+}
+
 /* A calendar game swaps OpenFront's leaderboard for the top bar and windows. */
 body.overreach-gsg game-left-sidebar {
   display: none !important;

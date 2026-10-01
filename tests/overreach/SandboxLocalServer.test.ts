@@ -86,6 +86,21 @@ describe("LocalServer in a paused sandbox", () => {
     expect(turns.length).toBe(before + 3); // still paused
   });
 
+  it("applies a paused answer to an event as three turns, 250 ms later", () => {
+    const before = turns.length;
+    send({
+      type: "overreach",
+      action: { kind: "event", event: "opium_war", option: 0 },
+    });
+    expect(turns.length).toBe(before);
+    vi.advanceTimersByTime(250);
+    expect(turns.length).toBe(before + 3);
+    expect(turns[before].intents.map((i) => i.type)).toEqual(["overreach"]);
+    expect(turns[before + 1].intents).toEqual([]);
+    vi.advanceTimersByTime(1000);
+    expect(turns.length).toBe(before + 3); // still paused
+  });
+
   it("steps one turn while paused, and not while running", () => {
     const before = turns.length;
     bus.emit(new SandboxStepEvent());

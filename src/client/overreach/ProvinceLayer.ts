@@ -18,6 +18,8 @@ export class ProvinceLayer {
   // Named cities by unit id.
   readonly cities = new Map<number, CityRecord>();
   subjects: Subject[] = [];
+  /** Every coalition against someone, as [target, members] (small ids). */
+  coalitions: [number, number[]][] = [];
   ending: Ending | null = null;
   formed = new Set<string>();
   events: Pending[] = [];
@@ -25,6 +27,10 @@ export class ProvinceLayer {
   dirtyFrom = 0;
   dirtyTo: number;
   version = 0;
+
+  // The HUD's story pieces (the alerts row, the event window) listen here: a
+  // controller tick only comes with a game update, and a paused game sends none.
+  private listeners = new Set<() => void>();
 
   constructor(
     readonly width: number,
@@ -58,10 +64,18 @@ export class ProvinceLayer {
       else this.cities.delete(id);
     }
     if (u.subjects) this.subjects = u.subjects;
+    if (u.coalitions) this.coalitions = u.coalitions;
     if (u.ending) this.ending = u.ending;
     if (u.formed) this.formed = new Set(u.formed);
     if (u.events) this.events = u.events;
     this.version++;
+    for (const l of this.listeners) l();
+  }
+
+  /** Hear about every applied update; returns the unsubscribe. */
+  onUpdate(l: () => void): () => void {
+    this.listeners.add(l);
+    return () => this.listeners.delete(l);
   }
 
   subjectOf(smallID: number): Subject | undefined {

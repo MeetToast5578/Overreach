@@ -1,4 +1,4 @@
-# Overreach handoff (30 Sep 2026)
+# Overreach handoff (1 Oct 2026)
 
 Where the fork stands after F0–F8, G0 and G1, and what the next session should pick up. The plan is `MASTERPLAN.md`
 (G0–G10); each phase has a **Status** block there. `SANDBOX.md` has F0–F8 (done). This file covers what those don't:
@@ -9,10 +9,10 @@ pre-fork engine; it's read-only.
 
 ## State
 
-- **Plan:** F0–F8 and G0, G1 are done. **G2 (the grand-strategy shell) is mostly done.** Built and checked in Chrome:
+- **Plan:** F0–F8 and G0, G1 are done. **G2 (the grand-strategy shell) is nearly done.** Built and checked in Chrome:
   left-click selection, top bar, province and nation windows, outliner, curved country names, five map modes, save and
-  load. Built but **never opened in a browser: the new-game page with nation picking** (`overreach/NewGame.ts`).
-  Left: that browser check, an alerts row, the event window's look, and tooltips with breakdowns. Then G3.
+  load, the new-game page with nation picking, the alerts row, the event window's look, and top-bar tooltips with
+  breakdowns. Left: the event log (bottom left, with filters), and the G1 checks below. Then G3.
 - **Not pushed:** `main` is ahead of `origin` (`MeetToast5578/Overreach`, private). The owner allowed commits, not pushes.
   They said (30 Sep 2026) to automate everything since it's a private project with nothing to lose; that covered local
   commits and builds. Pushing, deploying and going public were never done or authorized.
@@ -24,8 +24,8 @@ pre-fork engine; it's read-only.
 - **Tests:** the whole suite passes except `tests/UpdateRegister.test.ts` (needs `jq`). `tests/overreach` has 85 tests
   (~30 s); `FullGameSnapshot` is slow (~2.5 min).
 - **Play it:** `npm run dev`, then New game → click a nation on the map → Play as. Sandbox is on the title screen.
-  `npm run build-static` writes `static-site/` (95 MB, 1,488 files), which runs with no game server. It's up to date
-  with the new-game page. No server is running now; start one with
+  `npm run build-static` writes `static-site/` (95 MB, 1,488 files), which runs with no game server. It's one session
+  behind now (it predates the alerts row, the event window and the tooltips). No server is running now; start one with
   `cd static-site; python -m http.server 9100` (PowerShell `Start-Process`, and keep the PID to stop it later).
 
 ## Waiting on the owner
@@ -59,20 +59,27 @@ Each takes about a minute. `--width` on the first changes the map's size; the se
 
 ## Next work
 
-1. **Finish G2** (`MASTERPLAN.md` G2 status has the list):
-   - **Browser-check the new-game page first.** The script I was about to run: open the site, click New game
-     (`overreach-title a[href="#modal=new-game"]`), wait for the `#ov-newgame-map` canvas, hover and
-     click Prussia on the preview (map position = lon/lat on the 360° × 138° equirectangular frame, lat 80°N at the
-     top), confirm the button says "Play as Prussia", press it, and confirm the game starts as that nation
-     (`document.querySelector("build-menu").game.myPlayer().name()`). Screenshots of hover and pick go in a scratch folder.
-     Things likely to be off: preview resolution and click mapping, hover card placement, start-up time of the preview.
-   - Then the **alerts row** (a formable is ready, an event waits, a coalition forms, a truce ends), the **event window**
-     restyle (`StoryPanel.ts`), and **tooltips that break numbers down** (top bar first).
-   - Run `npx tsc --noEmit`, `npm run lint`, the tests, update the G2 status, commit.
+1. **Finish G2** (`MASTERPLAN.md` G2 status has the list): the **event log** (bottom left, with filters: OpenFront's
+   events display, restyled). The new-game page, the alerts row, the event window and the top-bar tooltips are done and
+   were checked in headless Chrome on 1 Oct 2026. Then `npx tsc --noEmit`, `npm run lint`, the tests, and G3.
+   - The alerts row covers a formable, a waiting event and a forming coalition. A truce ending, a peace offer,
+     bankruptcy and unrest wait for G3 and G6, where those systems land.
+   - The **event window pauses single-player**; the answer is applied even though the game is paused
+     (`LocalServer` takes `overreach` intents while paused, the way it takes sandbox edits).
 2. **G3, war and peace** (occupation, war score, peace deals), which also fixes the "too many wars" problem: 218 wars were open
    by 1846. `Diplomacy.ts` holds the knobs (`WAR_CHANCE`, `PEACE_TICKS`), but they get replaced.
 3. Then G4–G10 in `MASTERPLAN.md`'s order. The old `SANDBOX.md` F6 leftovers (the AI betraying its own subjects, humans
    demanding vassalage) go into G3 and G2.
+
+## Checking the client in a browser
+
+The drivers aren't in the repo and this container has no Chrome, so a session here builds its own from npm:
+`@sparticuz/chromium` (a brotli-packed Chromium) + `playwright-core`, driven from a scratch folder outside the repo.
+Two traps: the `swiftshader.tar.br` libraries must be extracted into the same folder as the Chromium binary or ANGLE
+cannot find its Vulkan ICD (WebGL dies with `EGL_NOT_INITIALIZED`), and the game refuses a software context on purpose
+(`initGL.ts` checks `failIfMajorPerformanceCaveat` and the unmasked renderer string), so the harness patches the
+renderer string to a hardware one. SwiftShader needs seconds a frame on the 22M-pixel map and starves the local
+server's turn pump: a check runs the game in a 640×400 window (~39 ticks/s) and resizes for screenshots.
 
 ## Code map
 
@@ -85,6 +92,7 @@ Each takes about a minute. `--width` on the first changes the map's size; the se
   - `OverreachIntent`: the player's `form` and `event` answers;
   - `Sandbox`, `SandboxExecution`: god-mode edits.
 - **Client (`src/client/overreach/`):**
+  - `Alerts`, `Story`, `StoryPanel`: what asks for the player (a formable, an event, a coalition) and the event window;
   - `Title`, `NewGame`: the title screen and the new-game page (`previewGrid` draws the owners map, `start()` builds the
     `gameStartInfo` and dispatches `join-lobby`);
   - `ScenarioFile`: the built-in list and scenario loading;

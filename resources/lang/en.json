@@ -2,6 +2,13 @@
   "account_modal": {
     "desktop_login_needs_update": "Signing in needs a newer version of the desktop app. Restart Steam to update, then try again."
   },
+  "alerts": {
+    "coalition": "A coalition forms",
+    "coalition_tip": "Against you, with {names}.",
+    "event": "An event waits",
+    "formable": "Can form {name}",
+    "formable_tip": "You hold the heartland of {name}: click to form it."
+  },
   "build_menu": {
     "desc": {
       "atom_bomb": "Small explosion",
@@ -306,6 +313,9 @@
     "texas_annexation_text": "The Republic of Texas asks to join the Union.",
     "texas_annexation_title": "Texas Asks to Join"
   },
+  "event_window": {
+    "waits": "Your answer is needed"
+  },
   "events_display": {
     "about_to_expire": "Your alliance with {name} is about to expire!",
     "accept_alliance": "Accept",
@@ -521,7 +531,9 @@
     "delete_save": "Delete this save",
     "diplomacy": "Diplomacy…",
     "gold": "Gold",
-    "gold_tip": "Treasury {gold}, earning {rate} a second",
+    "gold_income": "Income",
+    "gold_now": "Treasury",
+    "gold_source": "From your provinces' people and the rest of the economy. A full breakdown arrives with the economy.",
     "growth": "Growth",
     "hostile": "At war",
     "land": "Land",
@@ -548,8 +560,13 @@
     "terrain_highland": "Highland",
     "terrain_mountain": "Mountain",
     "terrain_plains": "Plains",
+    "troops_cap": "Cap",
+    "troops_cap_breakdown": "Where the cap comes from",
+    "troops_from_cities": "Cities ({levels} levels)",
+    "troops_from_land": "Land ({tiles} tiles)",
+    "troops_from_settings": "Settings",
     "troops_label": "Troops",
-    "troops_tip": "Troops {troops} of {max} (the most your land and cities hold)",
+    "troops_now": "Under arms",
     "unowned": "Unowned",
     "vassal": "vassal",
     "you": "You"
@@ -767,6 +784,13 @@
     "seconds": "seconds",
     "warning": "Vigilant Mode Warning"
   },
+  "new_lobby_prompt": {
+    "confirm": "Start a new lobby? All players will be invited to join.",
+    "dismiss": "Dismiss",
+    "failed": "Could not create a new lobby. Please try again.",
+    "join": "Join",
+    "message": "Host started a new lobby"
+  },
   "newgame": {
     "bookmark_1836": "1 January 1836",
     "bookmark_1836_text": "An age of revolutions and steam. Britain leads an industrial world, Russia, Austria and Prussia hold Europe together, the Ottoman Empire is failing, and the Americas, India and Africa are being divided.",
@@ -777,13 +801,6 @@
     "rank": "Rank by land",
     "start": "Play as {nation}",
     "title": "New game"
-  },
-  "new_lobby_prompt": {
-    "confirm": "Start a new lobby? All players will be invited to join.",
-    "dismiss": "Dismiss",
-    "failed": "Could not create a new lobby. Please try again.",
-    "join": "Join",
-    "message": "Host started a new lobby"
   },
   "news_box": {
     "firefox_warning": "Overreach doesn't perform well with [Firefox-based browsers](https://simple.wikipedia.org/wiki/Web_browsers_based_on_Firefox). We recommend you to use a [Chromium-based browser](https://en.wikipedia.org/wiki/Chromium_(web_browser)#Browsers_based_on_Chromium) for best performance.",
@@ -1009,9 +1026,6 @@
   },
   "spawn_timer": {
     "team_percent_tooltip": "{team}: {percent}"
-  },
-  "story": {
-    "form": "Form {name}"
   },
   "team_colors": {
     "blue": "Blue",
