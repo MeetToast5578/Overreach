@@ -409,7 +409,7 @@ one commit per slice.
 - Map modes: the framework plus political, terrain, provinces, diplomatic and population. Curved country names.
 - **Save and load:** a save is a core snapshot. Loading starts a new game whose first tick restores it, the way
   `ScenarioExecution` places a scenario, so the worker is never rebuilt mid-game. A yearly autosave goes to IndexedDB.
-  **Status (30 Sep 2026): in progress. Built so far:**
+  **Status (1 Oct 2026): in progress, and only the event log left. Built so far:**
 
 - **Left click selects** in a calendar game (one hook in `ClientGameRunner.inputEvent`); the right-click wheel still attacks
   and builds. A click picks a province and its owner.
@@ -434,11 +434,31 @@ one commit per slice.
 - **Hotkeys:** OpenFront's pause and speed keys stay (they're in Settings).
 - **New-game page** (`NewGame.ts`, `#modal=new-game`; the title's New game button): the 1836 bookmark card, a preview
   map of the scenario drawn from its province owners (`previewGrid`), nation picking by click with a hover card (flag,
-  name, land, rank), a great-powers list, and "Play as {nation}". It starts the game by dispatching `join-lobby` with the
-  scenario and the picked nation. **Written and unit-tested (`tests/overreach/NewGame.test.ts`), tsc and eslint clean,
-  the static site rebuilt with it, but never opened in a browser.** Check it first.
-- **Still to do in G2:** the browser check above, an alerts row and the event window's new look, and tooltips that
-  break numbers down.
+  name, rank, land), a great-powers list, and "Play as {nation}". It starts the game by dispatching `join-lobby` with the
+  scenario and the picked nation. **Checked in headless Chrome (1 Oct 2026):** the page loads in about three seconds,
+  hovering Berlin reads "Prussia #39 · 16.3K", a click picks Prussia, and "Play as Prussia" starts the game as Prussia
+  (16,304 tiles). Four fixes came out of the check: the map now sits above the controls (the old two-column layout left
+  a screen-high empty panel beside it), the page uses its 1,400px (main-layout caps content pages at 20cm; a
+  `body.page-open:has(#page-new-game:not(.hidden))` rule in `overreach.css` lifts it), land reads in tiles rather than
+  as a share of the world (0.1% for most nations said nothing), and the hover repaints only inside the hovered nation's
+  bounding box over a cached layer (18.6 ms a pointer move became 0.3 ms on the 1.4M-cell preview).
+- **Alerts row** (`Alerts.ts`): under the top bar, one line for each thing asking for the player, pulsing until it is
+  answered. Today: a formable is ready (clicking it forms the nation), an event waits (clicking it brings the event
+  window forward), a coalition forms (clicking it selects the first member). Truces, peace offers, bankruptcy and unrest
+  join in G3 and G6. Coalitions now reach the client at all: `ProvinceView.coalitions` ships them when they change.
+- **Event window** (`StoryPanel.ts`, restyled): a period frame over the map with the event's title, the year, the text
+  and its answers, each answer's effect in its own text. An important event pauses single-player, and the answer under
+  the pointer lights up. An answer clears the window and its alert even though the game is paused (the province layer
+  notifies its listeners; a controller tick only comes with a game update), and `LocalServer` now applies the player's
+  own decisions while paused — before that an answer came back as ignored.
+- **Tooltips that break numbers down** (`TopBar.ts`, `.ov-tip` in `overreach.css`): the gold chip shows the treasury and
+  the income a second, the troops chip shows troops and where the cap comes from (land, cities, and whatever the
+  settings add). The other windows' numbers join as their systems land (4.2, principle 2).
+- **Checked in headless Chrome (1 Oct 2026)** in a game as Qing: the Opium Crisis opens on 2 January 1839, the game
+  pauses, the alert row shows it, both answers are offered, and answering closes the window and clears the alert. The
+  software renderer here runs the 22M-pixel map at about 0.3 ticks a second at 1,600×1,000, so the check fast-forwards
+  in a 640×400 window (39 ticks/s) and resizes for the screenshots.
+- **Still to do in G2:** the event log (bottom left, with filters: OpenFront's events display, restyled).
 
 - **Done when:** you can start 1836 as Prussia by clicking it, read any province and nation, switch map modes, save in
   1840 and load it, and never see an OpenFront menu.

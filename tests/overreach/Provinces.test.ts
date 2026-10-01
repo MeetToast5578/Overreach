@@ -10,6 +10,7 @@ import {
   PlayerType,
 } from "../../src/core/game/Game";
 import { GameImpl } from "../../src/core/game/GameImpl";
+import { Diplomacy } from "../../src/core/overreach/Diplomacy";
 import { ProvinceExecution } from "../../src/core/overreach/ProvinceExecution";
 import {
   generateProvinces,
@@ -227,6 +228,28 @@ describe("Provinces", () => {
         { name: "Third", owner: 0, capital: null, population: 0, growth: 1000 },
       ],
     ]);
+  });
+
+  test("the client hears about coalitions only when they change", async () => {
+    const { game, a, b, provinces } = await stripes();
+    const diplomacy = new Diplomacy(
+      game,
+      provinces,
+      "coalitions",
+      new PseudoRandom(5),
+    );
+    (game as GameImpl).diplomacy = diplomacy;
+    const view = new ProvinceViewTracker();
+    const first = view.next(game)!;
+    expect(first.coalitions).toEqual([]);
+    expect(view.next(game)).toBeUndefined();
+
+    diplomacy.coalitions.set(b.smallID(), [a.smallID()]);
+    expect(view.next(game)!.coalitions).toEqual([[b.smallID(), [a.smallID()]]]);
+    expect(view.next(game)).toBeUndefined();
+
+    diplomacy.coalitions.delete(b.smallID());
+    expect(view.next(game)!.coalitions).toEqual([]);
   });
 
   test("generated provinces cover the land and nothing else", async () => {

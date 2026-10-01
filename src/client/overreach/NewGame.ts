@@ -11,7 +11,7 @@ import { type Scenario, ScenarioSchema } from "../../core/overreach/Scenario";
 import { generateID } from "../../core/Util";
 import { BaseModal } from "../components/BaseModal";
 import { GameStartingModal } from "../GameStartingModal";
-import { translateText } from "../Utils";
+import { renderNumber, translateText } from "../Utils";
 import { scenarioPlayer } from "./ScenarioFile";
 
 // The new-game page (MASTERPLAN.md section 4.4): a start date, and the world on that date as a map you click to
@@ -59,6 +59,32 @@ function rgb(hex: string): [number, number, number] {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
+/**
+ * Each nation's bounding box on the preview grid: x0, y0, x1, y1 (inclusive), or
+ * -1s for a nation with no cell. Highlighting a nation then scans its box instead
+ * of all 1.4M cells, which matters because the hover follows the mouse.
+ */
+export function nationBoxes(
+  cells: Uint16Array,
+  w: number,
+  h: number,
+  nations: number,
+): Int32Array {
+  const boxes = new Int32Array((nations + 1) * 4).fill(-1);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const n = cells[y * w + x];
+      if (n === 0) continue;
+      const b = n * 4;
+      if (boxes[b] < 0 || x < boxes[b]) boxes[b] = x;
+      if (boxes[b + 2] < 0 || x > boxes[b + 2]) boxes[b + 2] = x;
+      if (boxes[b + 1] < 0 || y < boxes[b + 1]) boxes[b + 1] = y;
+      if (boxes[b + 3] < 0 || y > boxes[b + 3]) boxes[b + 3] = y;
+    }
+  }
+  return boxes;
+}
+
 @customElement("overreach-newgame")
 export class NewGame extends BaseModal {
   protected routerName = "new-game";
@@ -68,10 +94,23 @@ export class NewGame extends BaseModal {
   @state() private hover = -1;
   @state() private difficulty: Difficulty = Difficulty.Medium;
   @state() private failed = false;
-  @state() private tip = { x: 0, y: 0 };
   private grid: ReturnType<typeof previewGrid> | null = null;
+  private boxes: Int32Array | null = null;
   private relief: HTMLImageElement | null = null;
   private overlay: HTMLCanvasElement | null = null;
+  /** Water, relief and the owners' colours — everything but the two highlights. */
+  private base: HTMLCanvasElement | null = null;
+  /** `base` with the picked nation already lit: a click is what changes it, not the mouse. */
+  private pickedLayer: HTMLCanvasElement | null = null;
+  /** The layer the live canvas currently shows, and whose pick is in it. */
+  private frameFrom: HTMLCanvasElement | null = null;
+  private pickedLayerIndex = -1;
+  /** The hovered nation's box as painted on the live canvas (for the next restore). */
+  private hoverBox: [number, number, number, number] | null = null;
+  // The tooltip's own corner of the map, in CSS pixels. Not @state on purpose:
+  // the mouse moves many times a second and only a change of nation is worth a
+  // repaint (see the mousemove handler).
+  private tip = { x: 0, y: 0 };
   private loading = false;
 
   protected modalConfig() {
@@ -99,10 +138,17 @@ export class NewGame extends BaseModal {
       );
       this.scenario = { ...s, player: s.player ?? 0 };
       this.picked = this.scenario.player ?? 0;
+      this.boxes = nationBoxes(
+        this.grid.cells,
+        this.grid.w,
+        this.grid.h,
+        s.nations.length,
+      );
       this.buildOverlay();
       const img = new Image();
       img.onload = () => {
         this.relief = img;
+        this.buildBase();
         this.paint();
       };
       img.src = assetUrl(`maps/${s.map.toLowerCase()}/relief.png`);
@@ -151,39 +197,136 @@ export class NewGame extends BaseModal {
     }
     ctx.putImageData(img, 0, 0);
     this.overlay = canvas;
+    this.buildBase();
     this.paint();
   }
 
-  protected updated(): void {
-    this.paint();
-  }
-
-  private paint() {
-    const canvas = this.querySelector<HTMLCanvasElement>("#ov-newgame-map");
+  // Water, relief and the owners' colours, drawn once per load (and once more
+  // when the relief image arrives). Hovers are painted on a copy of this.
+  private buildBase() {
     const g = this.grid;
-    if (canvas === null || g === null || this.overlay === null) return;
-    const ctx = canvas.getContext("2d")!;
+    if (g === null || this.overlay === null) return;
+    const canvas = document.createElement("canvas");
     canvas.width = g.w;
     canvas.height = g.h;
+    const ctx = canvas.getContext("2d")!;
     ctx.fillStyle = WATER;
     ctx.fillRect(0, 0, g.w, g.h);
     if (this.relief) ctx.drawImage(this.relief, 0, 0, g.w, g.h);
     ctx.globalAlpha = 0.62;
     ctx.drawImage(this.overlay, 0, 0);
     ctx.globalAlpha = 1;
-    // The hovered nation and the picked one are lit.
-    for (const [index, alpha] of [
-      [this.hover, 0.3],
-      [this.picked, 0.45],
-    ] as const) {
-      if (index < 0) continue;
-      ctx.fillStyle = `rgba(255, 244, 214, ${alpha})`;
-      for (let i = 0; i < g.cells.length; i++) {
-        if (g.cells[i] === index + 1) {
-          ctx.fillRect(i % g.w, Math.floor(i / g.w), 1, 1);
-        }
+    this.base = canvas;
+    this.buildPickedLayer();
+  }
+
+  /** The base with the picked nation lit. Rebuilt only when the pick changes. */
+  private buildPickedLayer() {
+    if (this.base === null) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = this.base.width;
+    canvas.height = this.base.height;
+    const ctx = canvas.getContext("2d")!;
+    ctx.drawImage(this.base, 0, 0);
+    this.paintNation(ctx, this.picked, 0.45);
+    this.pickedLayer = canvas;
+    this.pickedLayerIndex = this.picked;
+    // The live canvas is now out of date; the next paint redraws it whole.
+    this.frameFrom = null;
+  }
+
+  /** Light one nation's cells, scanning only the box that holds them. */
+  private paintNation(
+    ctx: CanvasRenderingContext2D,
+    index: number,
+    alpha: number,
+  ) {
+    if (index < 0) return;
+    const g = this.grid!;
+    const b = (index + 1) * 4;
+    const x0 = this.boxes![b];
+    if (x0 < 0) return;
+    const [y0, x1, y1] = [
+      this.boxes![b + 1],
+      this.boxes![b + 2],
+      this.boxes![b + 3],
+    ];
+    ctx.fillStyle = `rgba(255, 244, 214, ${alpha})`;
+    for (let y = y0; y <= y1; y++) {
+      for (let x = x0; x <= x1; x++) {
+        if (g.cells[y * g.w + x] === index + 1) ctx.fillRect(x, y, 1, 1);
       }
     }
+  }
+
+  protected updated(): void {
+    if (this.picked !== this.pickedLayerIndex) this.buildPickedLayer();
+    this.paint();
+    this.positionTip();
+  }
+
+  private paint() {
+    const canvas = this.querySelector<HTMLCanvasElement>("#ov-newgame-map");
+    const g = this.grid;
+    const from = this.pickedLayer;
+    if (canvas === null || g === null || from === null) return;
+    const ctx = canvas.getContext("2d")!;
+    if (canvas.width !== g.w || canvas.height !== g.h) {
+      canvas.width = g.w;
+      canvas.height = g.h;
+      this.frameFrom = null;
+    }
+    if (this.frameFrom !== from) {
+      ctx.drawImage(from, 0, 0);
+      this.frameFrom = from;
+      this.hoverBox = null;
+    } else if (this.hoverBox) {
+      // A hover only touches two small squares of the canvas: the one the
+      // pointer just left, and the one it is in now.
+      const [x0, y0, x1, y1] = this.hoverBox;
+      ctx.drawImage(
+        from,
+        x0,
+        y0,
+        x1 - x0 + 1,
+        y1 - y0 + 1,
+        x0,
+        y0,
+        x1 - x0 + 1,
+        y1 - y0 + 1,
+      );
+    }
+    const hover = this.hover;
+    if (hover >= 0 && hover !== this.picked) {
+      this.paintNation(ctx, hover, 0.3);
+      const b = (hover + 1) * 4;
+      this.hoverBox = [
+        this.boxes![b],
+        this.boxes![b + 1],
+        this.boxes![b + 2],
+        this.boxes![b + 3],
+      ];
+    } else {
+      this.hoverBox = null;
+    }
+  }
+
+  /** Keep the hover card beside the pointer, inside the map near its edges. */
+  private positionTip() {
+    const canvas = this.querySelector<HTMLCanvasElement>("#ov-newgame-map");
+    const card = this.querySelector<HTMLElement>("#ov-newgame-tip");
+    if (canvas === null || card === null) return;
+    const gap = 14;
+    let left = this.tip.x + gap;
+    if (left + card.offsetWidth > canvas.clientWidth) {
+      left = Math.max(0, this.tip.x - gap - card.offsetWidth);
+    }
+    let top = this.tip.y + gap;
+    if (top + card.offsetHeight > canvas.clientHeight) {
+      top = Math.max(0, this.tip.y - gap - card.offsetHeight);
+    }
+    card.style.left = `${left}px`;
+    card.style.top = `${top}px`;
   }
 
   private nationAt(e: MouseEvent): number {
@@ -253,13 +396,20 @@ export class NewGame extends BaseModal {
       : nothing;
   }
 
+  /** A nation's land in tiles and its rank among the scenario's nations. */
+  private land(i: number): { tiles: number; rank: number } {
+    const tiles = this.grid!.tiles;
+    const land = tiles[i + 1];
+    return {
+      tiles: land,
+      rank: 1 + tiles.slice(1).filter((t) => t > land).length,
+    };
+  }
+
   private nationCard(): TemplateResult {
     const s = this.scenario!;
-    const g = this.grid!;
     const n = s.nations[this.picked];
-    const totalLand = g.tiles.reduce((a, b) => a + b, 0);
-    const land = g.tiles[this.picked + 1];
-    const rank = 1 + g.tiles.slice(1).filter((t) => t > land).length;
+    const { tiles, rank } = this.land(this.picked);
     const name = (i: number) => s.nations[i]?.name ?? "";
     const bond = s.subjects?.find(([, sub]) => sub === this.picked);
     const subjects = (s.subjects ?? []).filter(([o]) => o === this.picked);
@@ -276,10 +426,7 @@ export class NewGame extends BaseModal {
         ${this.flag(this.picked, "h-5 w-8")}
         <span class="ov-title text-xl">${n.name}</span>
       </div>
-      ${row(
-        translateText("newgame.land"),
-        `${((land / totalLand) * 100).toFixed(1)}%`,
-      )}
+      ${row(translateText("newgame.land"), renderNumber(tiles))}
       ${row(translateText("newgame.rank"), `${rank} / ${s.nations.length}`)}
       ${bond
         ? row(
@@ -311,6 +458,7 @@ export class NewGame extends BaseModal {
     if (s === null || this.grid === null) {
       return this.renderLoadingSpinner(translateText("newgame.loading"));
     }
+    const hover = this.hover >= 0 ? this.land(this.hover) : null;
     return html`<div
       class="flex h-full flex-col gap-3 overflow-y-auto p-4 text-white"
     >
@@ -318,30 +466,37 @@ export class NewGame extends BaseModal {
         <button class=${button} @click=${() => this.close()}>←</button>
         <h2 class="ov-title text-2xl">${translateText("newgame.title")}</h2>
       </div>
-      <div class="grid gap-3 lg:grid-cols-[1fr_320px]">
-        <div class="relative">
-          <canvas
-            id="ov-newgame-map"
-            class="w-full cursor-pointer rounded border border-[#8a6d3b] [image-rendering:auto]"
-            @mousemove=${(e: MouseEvent) => {
-              this.hover = this.nationAt(e);
-              this.tip = { x: e.offsetX, y: e.offsetY };
-            }}
-            @mouseleave=${() => (this.hover = -1)}
-            @click=${(e: MouseEvent) => {
-              const i = this.nationAt(e);
-              if (i >= 0) this.picked = i;
-            }}
-          ></canvas>
-          ${this.hover >= 0
-            ? html`<div
-                class="ov-panel pointer-events-none absolute flex items-center gap-2 rounded border px-2 py-1 text-sm"
-                style="left:${this.tip.x + 14}px; top:${this.tip.y + 14}px"
+      <div class="relative">
+        <canvas
+          id="ov-newgame-map"
+          class="w-full cursor-pointer rounded border border-[#8a6d3b] [image-rendering:auto]"
+          @mousemove=${(e: MouseEvent) => {
+            this.tip = { x: e.offsetX, y: e.offsetY };
+            const i = this.nationAt(e);
+            // Only a change of nation repaints the map: the pointer moves far
+            // more often than it crosses a border.
+            if (i !== this.hover) this.hover = i;
+            this.positionTip();
+          }}
+          @mouseleave=${() => (this.hover = -1)}
+          @click=${(e: MouseEvent) => {
+            const i = this.nationAt(e);
+            if (i >= 0) this.picked = i;
+          }}
+        ></canvas>
+        ${this.hover >= 0
+          ? html`<div
+              id="ov-newgame-tip"
+              class="ov-panel pointer-events-none absolute flex items-center gap-2 whitespace-nowrap rounded border px-2 py-1 text-sm"
+            >
+              ${this.flag(this.hover)}${s.nations[this.hover].name}
+              <span class="text-white/50"
+                >#${hover!.rank} · ${renderNumber(hover!.tiles)}</span
               >
-                ${this.flag(this.hover)}${s.nations[this.hover].name}
-              </div>`
-            : nothing}
-        </div>
+            </div>`
+          : nothing}
+      </div>
+      <div class="grid items-start gap-3 lg:grid-cols-[1fr_340px]">
         <div class="flex flex-col gap-3">
           <div class="ov-panel rounded border p-3 text-sm">
             <div class="ov-title text-lg">
@@ -351,6 +506,29 @@ export class NewGame extends BaseModal {
               ${translateText("newgame.bookmark_1836_text")}
             </div>
           </div>
+          <div class="ov-panel rounded border p-3">
+            <div class="mb-2 text-xs uppercase tracking-widest text-white/50">
+              ${translateText("newgame.great_powers")}
+            </div>
+            <div class="flex flex-wrap gap-1.5">
+              ${s.nations
+                .slice(0, 10)
+                .map(
+                  (n, i) =>
+                    html`<button
+                      class="${button} flex items-center gap-1.5 text-xs ${i ===
+                      this.picked
+                        ? "ov-tab-on"
+                        : ""}"
+                      @click=${() => (this.picked = i)}
+                    >
+                      ${this.flag(i, "h-3 w-5")}${n.name}
+                    </button>`,
+                )}
+            </div>
+          </div>
+        </div>
+        <div class="flex flex-col gap-3">
           ${this.nationCard()}
           <label class="flex items-center justify-between gap-3 text-sm">
             ${translateText("difficulty.difficulty")}
@@ -376,25 +554,6 @@ export class NewGame extends BaseModal {
               nation: s.nations[this.picked].name,
             })}
           </button>
-          <div class="text-xs uppercase tracking-widest text-white/50">
-            ${translateText("newgame.great_powers")}
-          </div>
-          <div class="flex flex-wrap gap-1.5">
-            ${s.nations
-              .slice(0, 10)
-              .map(
-                (n, i) =>
-                  html`<button
-                    class="${button} flex items-center gap-1.5 text-xs ${i ===
-                    this.picked
-                      ? "ov-tab-on"
-                      : ""}"
-                    @click=${() => (this.picked = i)}
-                  >
-                    ${this.flag(i, "h-3 w-5")}${n.name}
-                  </button>`,
-              )}
-          </div>
         </div>
       </div>
     </div>`;

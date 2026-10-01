@@ -19,6 +19,8 @@ export interface ProvinceViewUpdate {
   cities?: [number, CityRecord | null][];
   // Every subject bond, when any changed.
   subjects?: Subject[];
+  // Every coalition, as [the nation it is against, its members], when any changed.
+  coalitions?: [number, number[]][];
   // How the game ended (Endings.ts), once.
   ending?: Ending;
   // Formables formed and events awaiting an answer, when either changed.
@@ -30,6 +32,7 @@ export class ProvinceViewTracker {
   private sent: Provinces | null = null;
   private shadow: (ProvinceRecord | null)[] = [];
   private subjectsSent = "";
+  private coalitionsSent = "";
   private endingSent = false;
   private storySent = "";
 
@@ -98,6 +101,14 @@ export class ProvinceViewTracker {
     if (key !== this.subjectsSent || out.layer) {
       this.subjectsSent = key;
       out.subjects = subjects.map((s) => ({ ...s }));
+    }
+    const coalitions = [
+      ...((game as GameImpl).diplomacy?.coalitions ?? []),
+    ].map(([target, members]) => [target, [...members]] as [number, number[]]);
+    const coalitionKey = JSON.stringify(coalitions);
+    if (coalitionKey !== this.coalitionsSent || out.layer) {
+      this.coalitionsSent = coalitionKey;
+      out.coalitions = coalitions;
     }
     return Object.keys(out).length > 0 ? out : undefined;
   }
